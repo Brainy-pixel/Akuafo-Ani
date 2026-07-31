@@ -357,10 +357,9 @@ function resetDashboardState() {
   lastData = null;
 
   document.getElementById("recommendations").innerHTML = RECOMMENDATIONS_PLACEHOLDER_HTML;
-  document.getElementById("top-recommendation-header").style.display = "none";
   document.getElementById("top-pick-img").style.display = "none";
   document.getElementById("top-pick-overlay").style.display = "none";
-  document.getElementById("top-pick-placeholder").style.display = "flex";
+  document.getElementById("top-pick-placeholder").style.display = "block";
   document.getElementById("why-card").style.display = "none";
   document.getElementById("fuzzy-note").style.display = "none";
   document.getElementById("ideas-listen-btn").style.display = "none";
@@ -369,6 +368,7 @@ function resetDashboardState() {
   document.getElementById("field-info").innerHTML =
     `<div class="placeholder-text" data-i18n="summary.placeholder">${t("summary.placeholder")}</div>`;
   clearAllInputs();
+  updateWelcomeHeading();
 }
 
 function showApp(user) {
@@ -379,16 +379,25 @@ function showApp(user) {
   applyLanguage(user.language);
   updateProfileView(user);
   resetDashboardState();
-  updateWelcomeHeading();
   showView("dashboard");
   initCropsHero();
 }
 
+// Swaps the Dashboard section-header between "Welcome, {name}" (script
+// style, before any analysis) and "Top Recommendation" (after analysis) —
+// same slot, so the greeting sits exactly where the heading normally does.
 function updateWelcomeHeading() {
   if (!currentUser) return;
-  const firstName = currentUser.full_name.trim().split(/\s+/)[0];
-  const el = document.getElementById("welcome-heading");
-  if (el) el.textContent = `${t("dashboard.welcomeHeading")}, ${firstName}`;
+  const el = document.getElementById("dashboard-heading");
+  if (!el) return;
+  if (lastData) {
+    el.textContent = t("dashboard.topRecommendation");
+    el.classList.remove("dashboard-heading-welcome");
+  } else {
+    const firstName = currentUser.full_name.trim().split(/\s+/)[0];
+    el.textContent = `${t("dashboard.welcomeHeading")}, ${firstName}`;
+    el.classList.add("dashboard-heading-welcome");
+  }
 }
 
 // ── Avatars: uploaded photo, else an original male/female default icon,
@@ -885,7 +894,7 @@ function renderTopPick(data) {
   const pct = Math.round(top.confidence * 100);
   const img = cropImage(top.crop);
 
-  document.getElementById("top-recommendation-header").style.display = "flex";
+  updateWelcomeHeading();
   document.getElementById("top-pick-placeholder").style.display = "none";
 
   const fgImg = document.getElementById("top-pick-img");
