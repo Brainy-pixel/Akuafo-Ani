@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Akuafo Ani</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -97,7 +100,13 @@
 
       <section class="card top-pick" id="top-pick">
         <img class="top-pick-img" id="top-pick-img" alt="" style="display:none;">
-        <div class="placeholder-text" id="top-pick-placeholder" data-i18n="dashboard.topPickPlaceholder">Run an analysis on the Crops tab to see your top crop pick here.</div>
+        <div class="welcome-hero" id="top-pick-placeholder">
+          <div class="welcome-hero-scrim"></div>
+          <div class="welcome-hero-text">
+            <div class="welcome-heading" id="welcome-heading">Welcome</div>
+            <div class="welcome-tagline" data-i18n="dashboard.welcomeTagline">A Happy, Informed and Cost-effective Farming with Akuafo Ani</div>
+          </div>
+        </div>
         <div class="top-pick-overlay" id="top-pick-overlay" style="display:none;">
           <span class="crop-rank top">1</span>
           <div class="top-pick-info">
@@ -229,7 +238,13 @@
       </section>
 
       <section class="card recommendations" id="recommendations">
-        <div class="placeholder-text" data-i18n="crops.placeholder">Enter your soil readings below and click "Analyze Soil Sample" to see crop recommendations.</div>
+        <div class="crops-hero" id="crops-hero">
+          <div class="crops-hero-slideshow" id="crops-hero-slideshow"></div>
+          <div class="welcome-hero-scrim"></div>
+          <div class="welcome-hero-text">
+            <div class="crops-hero-caption" id="crops-hero-caption"></div>
+          </div>
+        </div>
       </section>
 
       <div class="cert-text" id="fuzzy-note" style="display:none;">
@@ -254,6 +269,7 @@
       </section>
 
       <button class="primary-btn" id="analyze-btn">&#129514; <span data-i18n="crops.analyzeBtn">Analyze Soil Sample</span></button>
+      <button class="secondary-btn" id="clear-all-btn" type="button" data-i18n="crops.clearAll">Clear All</button>
       <button class="ghost-btn" id="random-btn" data-i18n="crops.randomBtn">Load a random real sample</button>
 
     </div>

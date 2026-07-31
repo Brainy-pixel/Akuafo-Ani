@@ -37,7 +37,8 @@ const TRANSLATIONS = {
     "common.back": "Back",
 
     "dashboard.topRecommendation": "Top Recommendation",
-    "dashboard.topPickPlaceholder": "Run an analysis on the Crops tab to see your top crop pick here.",
+    "dashboard.welcomeHeading": "Welcome",
+    "dashboard.welcomeTagline": "A Happy, Informed and Cost-effective Farming with Akuafo Ani",
     "dashboard.whyThisCrop": "Why this crop?",
     "dashboard.soilWeatherToday": "Soil Weather Today",
     "dashboard.rainfall": "Rainfall",
@@ -54,7 +55,6 @@ const TRANSLATIONS = {
     "dashboard.potassiumDesc": "Boosts disease resistance and overall plant strength.",
 
     "crops.recommendedCrops": "Recommended Crops",
-    "crops.placeholder": "Enter your soil readings below and click \"Analyze Soil Sample\" to see crop recommendations.",
     "crops.fuzzyNote": "Some values were estimated from similar soil samples (fuzzy match).",
     "crops.soilSampleInput": "Soil Sample Input",
     "crops.nitrogenLabel": "Nitrogen N (kg/ha)",
@@ -67,7 +67,12 @@ const TRANSLATIONS = {
     "crops.hint": "Leave any field blank if unknown — the model will estimate it from similar soil samples.",
     "crops.analyzeBtn": "Analyze Soil Sample",
     "crops.analyzing": "Analyzing...",
+    "crops.clearAll": "Clear All",
     "crops.randomBtn": "Load a random real sample",
+
+    "cropsHero.plant": "Plant Best Crop",
+    "cropsHero.harvest": "Harvest Crop Yields",
+    "cropsHero.market": "Food for All",
 
     "ideas.insightsTips": "Insights & Tips",
     "ideas.placeholder": "Analyze a soil sample on the Crops tab to get tailored tips here.",
@@ -134,7 +139,8 @@ const TRANSLATIONS = {
     "common.back": "San Kɔ",
 
     "dashboard.topRecommendation": "Deɛ Ɛfata Paa",
-    "dashboard.topPickPlaceholder": "Yɛ nhwehwɛmu wɔ Nnɔbae tab so na hu deɛ ɛfata wo asase paa wɔ ha.",
+    "dashboard.welcomeHeading": "Akwaaba",
+    "dashboard.welcomeTagline": "Kuayɛ a Ɛyɛ Anigye, Ɛma Nimdeɛ, Na Ɛnhyɛ Sika Bebree Wɔ Akuafo Ani",
     "dashboard.whyThisCrop": "Adɛn nti na ɛyɛ saa aduane yi?",
     "dashboard.soilWeatherToday": "Asase Wim Tebea Ɛnnɛ",
     "dashboard.rainfall": "Osu",
@@ -151,7 +157,6 @@ const TRANSLATIONS = {
     "dashboard.potassiumDesc": "Ɛma afifide tumi gyina nyarewa ano na ɛma emu yɛ den.",
 
     "crops.recommendedCrops": "Nnɔbae a Yɛkamfo",
-    "crops.placeholder": "Fa wo asase nsɛm hyɛ ase wɔ ase ha na klik \"Analyze Soil Sample\" na hu nnɔbae a wɔkamfo.",
     "crops.fuzzyNote": "Wɔkyerɛɛ nsɛm bi fi asase nhwɛso a ɛte saa ara mu (fuzzy match).",
     "crops.soilSampleInput": "Asase Nhwɛso Nsɛm",
     "crops.nitrogenLabel": "Nitrogen N (kg/ha)",
@@ -164,7 +169,12 @@ const TRANSLATIONS = {
     "crops.hint": "Gyae kwan biara mu kwaadu sɛ wonnim — model no bɛkyerɛ fi asase nhwɛso a ɛte saa ara mu.",
     "crops.analyzeBtn": "Hwehwɛ Asase Nhwɛso Mu",
     "crops.analyzing": "Ɛrehwehwɛ Mu...",
+    "crops.clearAll": "Yi Nyinaa",
     "crops.randomBtn": "Fa nhwɛso ankasa bi kwa",
+
+    "cropsHero.plant": "Dua Aduane Pa",
+    "cropsHero.harvest": "Twa Aduane",
+    "cropsHero.market": "Aduane Ma Obiara",
 
     "ideas.insightsTips": "Nteɛso ne Afotu",
     "ideas.placeholder": "Hwehwɛ asase nhwɛso mu wɔ Nnɔbae tab so na nya afotu wɔ ha.",
@@ -225,6 +235,8 @@ function applyLanguage(lang) {
   if (activeView) {
     document.getElementById("page-title").textContent = pageTitle(activeView.dataset.view);
   }
+  updateWelcomeHeading();
+  refreshCropsHeroCaption();
 }
 
 // ── Auth screens: Welcome / Log In / Sign Up, plus session bootstrap ───────
@@ -260,6 +272,53 @@ function initAuthSlideshow() {
   }, 3500);
 }
 
+// ── Crops tab pre-analysis carousel: cycles the three themed photos until
+// the user runs an analysis (Analyze Soil Sample / Load a random sample),
+// at which point renderResult() clears #recommendations and stops this. ──
+const CROPS_HERO_SLIDES = [
+  { image: "plant", captionKey: "cropsHero.plant" },
+  { image: "harvest", captionKey: "cropsHero.harvest" },
+  { image: "market", captionKey: "cropsHero.market" },
+];
+let cropsHeroInterval = null;
+let cropsHeroIndex = 0;
+
+function initCropsHero() {
+  const container = document.getElementById("crops-hero-slideshow");
+  const captionEl = document.getElementById("crops-hero-caption");
+  if (!container || !captionEl || container.children.length) return;
+
+  const layerA = document.createElement("div");
+  const layerB = document.createElement("div");
+  layerA.className = "crops-hero-slide active";
+  layerB.className = "crops-hero-slide";
+  layerA.style.backgroundImage = `url(images/hero/${CROPS_HERO_SLIDES[0].image}.jpg)`;
+  container.append(layerA, layerB);
+  cropsHeroIndex = 0;
+  captionEl.textContent = t(CROPS_HERO_SLIDES[0].captionKey);
+
+  let onA = true;
+  cropsHeroInterval = setInterval(() => {
+    cropsHeroIndex = (cropsHeroIndex + 1) % CROPS_HERO_SLIDES.length;
+    const incoming = onA ? layerB : layerA;
+    const outgoing = onA ? layerA : layerB;
+    incoming.style.backgroundImage = `url(images/hero/${CROPS_HERO_SLIDES[cropsHeroIndex].image}.jpg)`;
+    incoming.classList.add("active");
+    outgoing.classList.remove("active");
+    captionEl.textContent = t(CROPS_HERO_SLIDES[cropsHeroIndex].captionKey);
+    onA = !onA;
+  }, 3500);
+}
+
+function stopCropsHero() {
+  if (cropsHeroInterval) { clearInterval(cropsHeroInterval); cropsHeroInterval = null; }
+}
+
+function refreshCropsHeroCaption() {
+  const captionEl = document.getElementById("crops-hero-caption");
+  if (captionEl && cropsHeroInterval) captionEl.textContent = t(CROPS_HERO_SLIDES[cropsHeroIndex].captionKey);
+}
+
 function showAuthView(view) {
   document.querySelectorAll(".auth-view").forEach((v) => v.classList.remove("active"));
   document.querySelector(`.auth-view[data-auth-view="${view}"]`).classList.add("active");
@@ -280,6 +339,37 @@ function showAuthScreen() {
 
 let currentUser = null;
 
+const RECOMMENDATIONS_PLACEHOLDER_HTML = `
+  <div class="crops-hero" id="crops-hero">
+    <div class="crops-hero-slideshow" id="crops-hero-slideshow"></div>
+    <div class="welcome-hero-scrim"></div>
+    <div class="welcome-hero-text">
+      <div class="crops-hero-caption" id="crops-hero-caption"></div>
+    </div>
+  </div>
+`;
+
+// Restores every "no analysis yet" placeholder. Needed because renderResult()
+// permanently replaces #recommendations' markup — without this, logging out
+// and back in (no page reload) would leave the crops carousel gone for good.
+function resetDashboardState() {
+  stopCropsHero();
+  lastData = null;
+
+  document.getElementById("recommendations").innerHTML = RECOMMENDATIONS_PLACEHOLDER_HTML;
+  document.getElementById("top-pick-img").style.display = "none";
+  document.getElementById("top-pick-overlay").style.display = "none";
+  document.getElementById("top-pick-placeholder").style.display = "flex";
+  document.getElementById("why-card").style.display = "none";
+  document.getElementById("fuzzy-note").style.display = "none";
+  document.getElementById("ideas-listen-btn").style.display = "none";
+  document.getElementById("ideas-box").innerHTML =
+    `<div class="placeholder-text" data-i18n="ideas.placeholder">${t("ideas.placeholder")}</div>`;
+  document.getElementById("field-info").innerHTML =
+    `<div class="placeholder-text" data-i18n="summary.placeholder">${t("summary.placeholder")}</div>`;
+  clearAllInputs();
+}
+
 function showApp(user) {
   currentUser = user;
   document.getElementById("auth-screen").classList.add("hidden");
@@ -287,8 +377,17 @@ function showApp(user) {
   applyTheme(user.theme);
   applyLanguage(user.language);
   updateProfileView(user);
+  resetDashboardState();
+  updateWelcomeHeading();
   showView("dashboard");
-  loadRandomSample();
+  initCropsHero();
+}
+
+function updateWelcomeHeading() {
+  if (!currentUser) return;
+  const firstName = currentUser.full_name.trim().split(/\s+/)[0];
+  const el = document.getElementById("welcome-heading");
+  if (el) el.textContent = `${t("dashboard.welcomeHeading")}, ${firstName}`;
 }
 
 // ── Avatars: uploaded photo, else an original male/female default icon,
@@ -655,6 +754,14 @@ function fillInputs(values) {
   }
 }
 
+function clearAllInputs() {
+  for (const f of FIELDS) {
+    document.getElementById("in-" + f).value = "";
+  }
+}
+
+document.getElementById("clear-all-btn").addEventListener("click", clearAllInputs);
+
 function setGauge(gaugeId, pct, colorVar) {
   const gauge = document.getElementById(gaugeId);
   const color = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
@@ -664,6 +771,7 @@ function setGauge(gaugeId, pct, colorVar) {
 
 function renderResult(data) {
   lastData = data;
+  stopCropsHero();
 
   // pH gauge: scale 0-14 -> 0-100%
   const ph = data.readings.ph.value;

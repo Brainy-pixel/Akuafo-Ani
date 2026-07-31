@@ -286,6 +286,7 @@ body {
   display: flex;
   border-top: 1px solid var(--border);
   padding: 10px 0 18px;
+  z-index: 10;
 }
 .nav-item {
   flex: 1; text-align: center; font-size: 11px; color: var(--muted);
@@ -310,7 +311,6 @@ body {
   object-fit: cover;
   object-position: center;
 }
-.top-pick .placeholder-text { position: relative; padding: 100px 18px; width: 100%; z-index: 1; }
 .top-pick-overlay {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
   display: flex; align-items: center; gap: 12px; padding: 20px; width: 100%;
@@ -326,6 +326,73 @@ body {
 @media (min-width: 700px) {
   .top-pick { min-height: 360px; }
 }
+
+/* ── Welcome hero (Dashboard) & themed carousel (Crops), shown only before
+   any analysis has been run — script-style greeting over a full-bleed photo,
+   matching the wooden "Welcome" sign styling requested. ───────────────────*/
+.welcome-hero {
+  position: absolute; inset: 0; z-index: 1;
+  background-image: url(images/hero/welcome.jpg);
+  background-size: cover; background-position: center;
+  display: flex; align-items: center; justify-content: center;
+}
+.welcome-hero-scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(8,16,10,0.35) 0%, rgba(8,16,10,0.8) 100%);
+}
+.welcome-hero-text { position: relative; z-index: 1; text-align: center; padding: 24px; }
+.welcome-heading {
+  font-family: "Dancing Script", cursive;
+  font-size: 44px; font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.55);
+  line-height: 1.15;
+}
+.welcome-tagline {
+  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.95);
+  margin: 10px auto 0; max-width: 300px;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.55);
+}
+
+.crops-hero {
+  position: relative;
+  min-height: 220px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.crops-hero-slideshow { position: absolute; inset: 0; }
+.crops-hero-slide {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+.crops-hero-slide.active { opacity: 1; }
+.crops-hero .welcome-hero-scrim { position: absolute; inset: 0; }
+.crops-hero .welcome-hero-text {
+  position: absolute; inset: 0;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 20px;
+}
+.crops-hero-caption {
+  font-family: "Dancing Script", cursive;
+  font-size: 30px; font-weight: 700; color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.55);
+}
+
+.secondary-btn {
+  width: 100%;
+  background: transparent;
+  color: var(--forest);
+  border: 2px solid var(--forest);
+  border-radius: 16px;
+  padding: 15px;
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 10px;
+  cursor: pointer;
+}
+.secondary-btn:active { background: var(--card-alt); }
 
 /* ── Why card (explainability, collapsible) ──────────────────────────────── */
 .why-card { padding: 18px; margin-bottom: 20px; }
