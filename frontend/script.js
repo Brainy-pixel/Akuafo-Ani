@@ -342,7 +342,6 @@ let currentUser = null;
 const RECOMMENDATIONS_PLACEHOLDER_HTML = `
   <div class="crops-hero" id="crops-hero">
     <div class="crops-hero-slideshow" id="crops-hero-slideshow"></div>
-    <div class="welcome-hero-scrim"></div>
     <div class="welcome-hero-text">
       <div class="crops-hero-caption" id="crops-hero-caption"></div>
     </div>
