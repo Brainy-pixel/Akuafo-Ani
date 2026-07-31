@@ -357,6 +357,7 @@ function resetDashboardState() {
   lastData = null;
 
   document.getElementById("recommendations").innerHTML = RECOMMENDATIONS_PLACEHOLDER_HTML;
+  document.getElementById("top-recommendation-header").style.display = "none";
   document.getElementById("top-pick-img").style.display = "none";
   document.getElementById("top-pick-overlay").style.display = "none";
   document.getElementById("top-pick-placeholder").style.display = "flex";
@@ -760,7 +761,10 @@ function clearAllInputs() {
   }
 }
 
-document.getElementById("clear-all-btn").addEventListener("click", clearAllInputs);
+document.getElementById("clear-all-btn").addEventListener("click", () => {
+  resetDashboardState();
+  initCropsHero();
+});
 
 function setGauge(gaugeId, pct, colorVar) {
   const gauge = document.getElementById(gaugeId);
@@ -881,6 +885,7 @@ function renderTopPick(data) {
   const pct = Math.round(top.confidence * 100);
   const img = cropImage(top.crop);
 
+  document.getElementById("top-recommendation-header").style.display = "flex";
   document.getElementById("top-pick-placeholder").style.display = "none";
 
   const fgImg = document.getElementById("top-pick-img");
