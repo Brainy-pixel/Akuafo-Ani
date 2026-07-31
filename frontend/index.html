@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akuafo Ani</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ─────────────────────── AUTH SCREENS (Welcome / Log In / Sign Up) ─────────────────────── -->
+<div class="auth-screen hidden" id="auth-screen">
+  <div class="auth-slideshow" id="auth-slideshow"></div>
+  <div class="auth-scrim"></div>
+
+  <div class="auth-view active" data-auth-view="welcome">
+    <div class="auth-welcome-content">
+      <div class="auth-logo">&#127793;</div>
+      <h1 class="auth-wordmark">AKUAFO ANI</h1>
+      <p class="auth-tagline">Smarter crop choices, straight from your soil.</p>
+    </div>
+    <div class="auth-welcome-actions">
+      <button class="auth-btn auth-btn-solid" data-go="login" type="button">Log In</button>
+      <button class="auth-btn auth-btn-outline" data-go="signup" type="button">Sign Up</button>
+    </div>
+  </div>
+
+  <div class="auth-view" data-auth-view="login">
+    <div class="auth-form-panel">
+      <button class="auth-back" data-go="welcome" type="button" aria-label="Back">&#8592;</button>
+      <h2 class="auth-heading">Welcome Back</h2>
+      <p class="auth-subheading">Log in to your account</p>
+      <div class="auth-error" id="login-error" style="display:none;"></div>
+      <form id="login-form">
+        <label class="auth-field">
+          <span>Email</span>
+          <input type="email" id="login-email" required autocomplete="email" placeholder="you@example.com">
+        </label>
+        <label class="auth-field">
+          <span>Password</span>
+          <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••">
+        </label>
+        <button class="auth-btn auth-btn-solid" type="submit" id="login-submit">Log In</button>
+      </form>
+      <p class="auth-switch">Don't have an account? <a href="#" data-go="signup">Sign Up</a></p>
+    </div>
+  </div>
+
+  <div class="auth-view" data-auth-view="signup">
+    <div class="auth-form-panel">
+      <button class="auth-back" data-go="welcome" type="button" aria-label="Back">&#8592;</button>
+      <h2 class="auth-heading">Create Account</h2>
+      <p class="auth-subheading">Sign up to get started</p>
+      <div class="auth-error" id="signup-error" style="display:none;"></div>
+      <form id="signup-form">
+        <label class="auth-field">
+          <span>Full Name</span>
+          <input type="text" id="signup-name" required autocomplete="name" placeholder="Kwame Mensah">
+        </label>
+        <label class="auth-field">
+          <span>Email</span>
+          <input type="email" id="signup-email" required autocomplete="email" placeholder="you@example.com">
+        </label>
+        <label class="auth-field">
+          <span>Password</span>
+          <input type="password" id="signup-password" required autocomplete="new-password" placeholder="At least 6 characters">
+        </label>
+        <button class="auth-btn auth-btn-solid" type="submit" id="signup-submit">Sign Up</button>
+      </form>
+      <p class="auth-switch">Already have an account? <a href="#" data-go="login">Log In</a></p>
+    </div>
+  </div>
+</div>
+
+<div class="app hidden" id="app-root">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-logo">&#127793;</span>
+      <span class="brand-name">Akuafo Ani</span>
+    </div>
+    <h1 class="page-title" id="page-title">Akuafo Ani</h1>
+    <div class="topbar-actions">
+      <span class="icon-btn" title="Notifications">&#128276;</span>
+      <span class="avatar" id="profile-avatar-btn" title="Profile">&#128100;</span>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- ─────────────────────── DASHBOARD VIEW ─────────────────────── -->
+    <div class="view active" data-view="dashboard">
+
+      <section class="section-header top-header">
+        <h3>Top Recommendation</h3>
+      </section>
+
+      <section class="card top-pick" id="top-pick">
+        <img class="top-pick-img" id="top-pick-img" alt="" style="display:none;">
+        <div class="placeholder-text" id="top-pick-placeholder">Run an analysis on the Crops tab to see your top crop pick here.</div>
+        <div class="top-pick-overlay" id="top-pick-overlay" style="display:none;">
+          <span class="crop-rank top">1</span>
+          <div class="top-pick-info">
+            <div class="top-pick-name" id="top-pick-name"></div>
+            <div class="top-pick-conf" id="top-pick-conf"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card why-card" id="why-card" style="display:none;">
+        <button class="why-toggle" id="why-toggle" type="button" aria-expanded="false">
+          <span>Why this crop?</span>
+          <span class="why-chevron" id="why-chevron">&#9662;</span>
+        </button>
+        <ul class="why-list" id="why-list" style="display:none;"></ul>
+        <button class="listen-btn" id="why-listen-btn" type="button">
+          <span class="listen-icon">&#128266;</span>
+          <span class="listen-label">Listen</span>
+        </button>
+      </section>
+
+      <section class="card weather-card" id="weather-card">
+        <div class="weather-top">
+          <div class="weather-location">
+            <span class="weather-pin">&#128205;</span>
+            <div>
+              <div class="weather-place">KNUST</div>
+              <div class="weather-sub">Soil Weather Today</div>
+            </div>
+          </div>
+          <div class="weather-temp-block">
+            <span class="weather-icon" id="weather-icon">&#9925;</span>
+            <span class="weather-temp" id="weather-temp-value">--&deg;C</span>
+          </div>
+        </div>
+        <div class="weather-stats">
+          <div class="weather-stat">
+            <span class="weather-stat-icon">&#127783;&#65039;</span>
+            <span class="weather-stat-label">Rainfall</span>
+            <span class="weather-stat-value" id="weather-rainfall-value">-- mm</span>
+          </div>
+          <div class="weather-stat">
+            <span class="weather-stat-icon">&#128167;</span>
+            <span class="weather-stat-label">Humidity</span>
+            <span class="weather-stat-value" id="weather-humidity-value">--%</span>
+          </div>
+          <div class="weather-stat">
+            <span class="weather-stat-icon">&#127777;&#65039;</span>
+            <span class="weather-stat-label">Condition</span>
+            <span class="weather-stat-value" id="weather-condition-value">--</span>
+          </div>
+        </div>
+        <div class="weather-gauges">
+          <div class="gauge-block">
+            <div class="gauge-title">Soil pH</div>
+            <div class="gauge" id="gauge-ph">
+              <div class="gauge-value" id="ph-value">--</div>
+            </div>
+            <div class="gauge-label" id="ph-label">--</div>
+          </div>
+          <div class="gauge-block">
+            <div class="gauge-title">Moisture</div>
+            <div class="gauge" id="gauge-moisture">
+              <div class="gauge-value" id="moisture-value">--%</div>
+            </div>
+            <div class="gauge-label" id="moisture-label">--</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-header">
+        <h3>Nutrient Balance</h3>
+        <span class="info-icon" title="N, P and K shown as a share of their combined kg/ha">&#9432;</span>
+      </section>
+
+      <section class="nutrient-main card">
+        <div class="nutrient-head">
+          <span class="nutrient-icon n">N</span>
+          <div>
+            <div class="nutrient-title">Nitrogen</div>
+            <div class="nutrient-desc">Essential for leaf growth and lush green foliage.</div>
+          </div>
+        </div>
+        <div class="nutrient-value-row">
+          <span class="nutrient-value" id="pct-n">0%</span>
+          <span class="trend" id="trend-n">&#8599;</span>
+        </div>
+        <div class="bar-track small"><div class="bar-fill n" id="bar-n" style="width:0%"></div></div>
+      </section>
+
+      <section class="nutrient-pair">
+        <div class="card nutrient-small">
+          <div class="nutrient-head">
+            <span class="nutrient-icon p">P</span>
+            <div>
+              <div class="nutrient-title">Phosphorus</div>
+              <div class="nutrient-desc">Supports strong root and flower development.</div>
+            </div>
+          </div>
+          <div class="nutrient-value-row">
+            <span class="nutrient-value" id="pct-p">0%</span>
+            <span class="trend" id="trend-p">&#8599;</span>
+          </div>
+          <div class="bar-track small"><div class="bar-fill p" id="bar-p" style="width:0%"></div></div>
+        </div>
+        <div class="card nutrient-small">
+          <div class="nutrient-head">
+            <span class="nutrient-icon k">K</span>
+            <div>
+              <div class="nutrient-title">Potassium</div>
+              <div class="nutrient-desc">Boosts disease resistance and overall plant strength.</div>
+            </div>
+          </div>
+          <div class="nutrient-value-row">
+            <span class="nutrient-value" id="pct-k">0%</span>
+            <span class="trend" id="trend-k">&#8600;</span>
+          </div>
+          <div class="bar-track small"><div class="bar-fill k" id="bar-k" style="width:0%"></div></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ─────────────────────────── CROPS VIEW ─────────────────────────── -->
+    <div class="view" data-view="crops">
+
+      <section class="section-header top-header">
+        <h3>Recommended Crops</h3>
+      </section>
+
+      <section class="card recommendations" id="recommendations">
+        <div class="placeholder-text">Enter your soil readings below and click "Analyze Soil Sample" to see crop recommendations.</div>
+      </section>
+
+      <div class="cert-text" id="fuzzy-note" style="display:none;">
+        &#9888; Some values were estimated from similar soil samples (fuzzy match).
+      </div>
+
+      <section class="section-header">
+        <h3>Soil Sample Input</h3>
+      </section>
+
+      <section class="card sample-form">
+        <div class="form-grid">
+          <label>Nitrogen N (kg/ha)<input type="number" id="in-N" placeholder="e.g. 90"></label>
+          <label>Phosphorus P (kg/ha)<input type="number" id="in-P" placeholder="e.g. 42"></label>
+          <label>Potassium K (kg/ha)<input type="number" id="in-K" placeholder="e.g. 43"></label>
+          <label>Temperature (&deg;C)<input type="number" id="in-temperature" placeholder="e.g. 25"></label>
+          <label>Humidity (%)<input type="number" id="in-humidity" placeholder="e.g. 80"></label>
+          <label>Soil pH<input type="number" step="0.1" id="in-ph" placeholder="e.g. 6.5"></label>
+          <label>Rainfall (mm)<input type="number" id="in-rainfall" placeholder="e.g. 200"></label>
+        </div>
+        <p class="form-hint">Leave any field blank if unknown &mdash; the model will estimate it from similar soil samples.</p>
+      </section>
+
+      <button class="primary-btn" id="analyze-btn">&#129514; Analyze Soil Sample</button>
+      <button class="ghost-btn" id="random-btn">Load a random real sample</button>
+
+    </div>
+
+    <!-- ─────────────────────────── IDEAS VIEW ─────────────────────────── -->
+    <div class="view" data-view="ideas">
+
+      <section class="section-header top-header">
+        <h3>Insights &amp; Tips</h3>
+      </section>
+
+      <section class="card" id="ideas-box">
+        <div class="placeholder-text">Analyze a soil sample on the Crops tab to get tailored tips here.</div>
+      </section>
+
+      <button class="listen-btn" id="ideas-listen-btn" type="button" style="display:none;">
+        <span class="listen-icon">&#128266;</span>
+        <span class="listen-label">Listen to tips</span>
+      </button>
+
+    </div>
+
+    <!-- ─────────────────────────── SUMMARY VIEW ─────────────────────────── -->
+    <div class="view" data-view="fields">
+
+      <section class="section-header top-header">
+        <h3>Sample Summary</h3>
+      </section>
+
+      <section class="card field-info-card" id="field-info">
+        <div class="placeholder-text">No sample analyzed yet. Your soil readings will appear here.</div>
+      </section>
+
+    </div>
+
+    <!-- ─────────────────────────── PROFILE VIEW ─────────────────────────── -->
+    <div class="view" data-view="profile">
+
+      <section class="card profile-card">
+        <div class="profile-avatar" id="profile-initials">?</div>
+        <div class="profile-name" id="profile-name">—</div>
+        <div class="profile-email" id="profile-email">—</div>
+      </section>
+
+      <button class="ghost-btn logout-btn" id="logout-btn" type="button">Log Out</button>
+
+    </div>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="nav-item active" data-view="dashboard"><span>&#128200;</span>Dashboard</div>
+    <div class="nav-item" data-view="crops"><span>&#127807;</span>Crops</div>
+    <div class="nav-item" data-view="ideas"><span>&#128161;</span>Ideas</div>
+    <div class="nav-item" data-view="fields"><span>&#128506;&#65039;</span>Summary</div>
+  </nav>
+
+  <div class="crop-detail-overlay" id="crop-detail-overlay">
+    <div class="crop-detail-panel">
+      <button class="back-btn" id="crop-detail-back">&#8592; Back</button>
+      <div class="crop-detail-img-wrap">
+        <img class="crop-detail-img" id="crop-detail-img" alt="">
+      </div>
+      <div class="crop-detail-body">
+        <div class="crop-detail-head">
+          <div class="crop-detail-name" id="crop-detail-name"></div>
+          <div class="crop-detail-conf" id="crop-detail-conf"></div>
+        </div>
+        <div class="crop-detail-subtitle">Why this crop matches your soil</div>
+        <ul class="crop-detail-reasons" id="crop-detail-reasons"></ul>
+        <button class="listen-btn" id="crop-detail-listen-btn" type="button">
+          <span class="listen-icon">&#128266;</span>
+          <span class="listen-label">Listen</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+users.db
+outputs/.flask_secret
+.claude/
