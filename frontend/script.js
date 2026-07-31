@@ -6,6 +6,227 @@ function cropImage(crop) {
   return `images/crops/${crop.toLowerCase()}.jpg`;
 }
 
+// ── i18n: translates static UI chrome only (nav, headers, buttons, labels).
+// Crop names, model-generated reasons, and live weather/soil readings stay
+// in English regardless of language — translating generated text is out of
+// scope here. Twi text is a best-effort machine/AI translation and has NOT
+// been reviewed by a native speaker — verify before relying on it publicly. ──
+const TRANSLATIONS = {
+  en: {
+    "auth.tagline": "Smarter crop choices, straight from your soil.",
+    "auth.logIn": "Log In",
+    "auth.signUp": "Sign Up",
+    "auth.welcomeBack": "Welcome Back",
+    "auth.loginSubtitle": "Log in to your account",
+    "auth.email": "Email",
+    "auth.password": "Password",
+    "auth.noAccount": "Don't have an account?",
+    "auth.createAccount": "Create Account",
+    "auth.signupSubtitle": "Sign up to get started",
+    "auth.fullName": "Full Name",
+    "auth.haveAccount": "Already have an account?",
+
+    "nav.dashboard": "Dashboard",
+    "nav.crops": "Crops",
+    "nav.ideas": "Ideas",
+    "nav.summary": "Summary",
+    "nav.profile": "Profile",
+    "app.title": "Akuafo Ani",
+
+    "common.listen": "Listen",
+    "common.back": "Back",
+
+    "dashboard.topRecommendation": "Top Recommendation",
+    "dashboard.topPickPlaceholder": "Run an analysis on the Crops tab to see your top crop pick here.",
+    "dashboard.whyThisCrop": "Why this crop?",
+    "dashboard.soilWeatherToday": "Soil Weather Today",
+    "dashboard.rainfall": "Rainfall",
+    "dashboard.humidity": "Humidity",
+    "dashboard.condition": "Condition",
+    "dashboard.soilPh": "Soil pH",
+    "dashboard.moisture": "Moisture",
+    "dashboard.nutrientBalance": "Nutrient Balance",
+    "dashboard.nitrogen": "Nitrogen",
+    "dashboard.nitrogenDesc": "Essential for leaf growth and lush green foliage.",
+    "dashboard.phosphorus": "Phosphorus",
+    "dashboard.phosphorusDesc": "Supports strong root and flower development.",
+    "dashboard.potassium": "Potassium",
+    "dashboard.potassiumDesc": "Boosts disease resistance and overall plant strength.",
+
+    "crops.recommendedCrops": "Recommended Crops",
+    "crops.placeholder": "Enter your soil readings below and click \"Analyze Soil Sample\" to see crop recommendations.",
+    "crops.fuzzyNote": "Some values were estimated from similar soil samples (fuzzy match).",
+    "crops.soilSampleInput": "Soil Sample Input",
+    "crops.nitrogenLabel": "Nitrogen N (kg/ha)",
+    "crops.phosphorusLabel": "Phosphorus P (kg/ha)",
+    "crops.potassiumLabel": "Potassium K (kg/ha)",
+    "crops.temperatureLabel": "Temperature (°C)",
+    "crops.humidityLabel": "Humidity (%)",
+    "crops.phLabel": "Soil pH",
+    "crops.rainfallLabel": "Rainfall (mm)",
+    "crops.hint": "Leave any field blank if unknown — the model will estimate it from similar soil samples.",
+    "crops.analyzeBtn": "Analyze Soil Sample",
+    "crops.analyzing": "Analyzing...",
+    "crops.randomBtn": "Load a random real sample",
+
+    "ideas.insightsTips": "Insights & Tips",
+    "ideas.placeholder": "Analyze a soil sample on the Crops tab to get tailored tips here.",
+    "ideas.listenToTips": "Listen to tips",
+
+    "summary.sampleSummary": "Sample Summary",
+    "summary.placeholder": "No sample analyzed yet. Your soil readings will appear here.",
+    "summary.source": "Source",
+    "summary.estimated": "Estimated (fuzzy match)",
+    "summary.directReading": "Direct reading",
+
+    "cropDetail.subtitle": "Why this crop matches your soil",
+
+    "profile.removePhoto": "Remove photo",
+    "profile.personalDetails": "Personal Details",
+    "profile.saved": "Saved.",
+    "profile.fullName": "Full Name",
+    "profile.email": "Email",
+    "profile.phone": "Phone Number",
+    "profile.avatarStyle": "Avatar Style",
+    "profile.male": "Male",
+    "profile.female": "Female",
+    "profile.saveChanges": "Save Changes",
+    "profile.loginSecurity": "Login & Security",
+    "profile.passwordUpdated": "Password updated.",
+    "profile.currentPassword": "Current Password",
+    "profile.newPassword": "New Password",
+    "profile.confirmPassword": "Confirm New Password",
+    "profile.updatePassword": "Update Password",
+    "profile.twoFactor": "Two-Factor Authentication",
+    "profile.activeSessions": "Active Sessions",
+    "profile.comingSoon": "Coming soon",
+    "profile.preferences": "Preferences",
+    "profile.darkMode": "Dark Mode",
+    "profile.darkModeSub": "Switch between light and dark themes",
+    "profile.notifications": "Notifications",
+    "profile.notificationsSub": "Get updates about your soil samples",
+    "profile.language": "Language",
+    "profile.languageSub": "Choose your preferred language",
+    "profile.logOut": "Log Out",
+  },
+  tw: {
+    "auth.tagline": "Nnɔbae a wɔpaw yiye, fi wo asase mu tee.",
+    "auth.logIn": "Kɔ Akawnt Mu",
+    "auth.signUp": "Yɛ Akawnt Foforo",
+    "auth.welcomeBack": "Akwaaba Bio",
+    "auth.loginSubtitle": "Kɔ wo akawnt mu",
+    "auth.email": "Email",
+    "auth.password": "Password",
+    "auth.noAccount": "Wonni akawnt?",
+    "auth.createAccount": "Yɛ Akawnt",
+    "auth.signupSubtitle": "Yɛ akawnt na fi ase",
+    "auth.fullName": "Din Mu Nyinaa",
+    "auth.haveAccount": "Wowɔ akawnt dedaw?",
+
+    "nav.dashboard": "Dashboard",
+    "nav.crops": "Nnɔbae",
+    "nav.ideas": "Nsusuwii",
+    "nav.summary": "Nkyerɛmu",
+    "nav.profile": "Wo Ho Nsɛm",
+    "app.title": "Akuafo Ani",
+
+    "common.listen": "Tie",
+    "common.back": "San Kɔ",
+
+    "dashboard.topRecommendation": "Deɛ Ɛfata Paa",
+    "dashboard.topPickPlaceholder": "Yɛ nhwehwɛmu wɔ Nnɔbae tab so na hu deɛ ɛfata wo asase paa wɔ ha.",
+    "dashboard.whyThisCrop": "Adɛn nti na ɛyɛ saa aduane yi?",
+    "dashboard.soilWeatherToday": "Asase Wim Tebea Ɛnnɛ",
+    "dashboard.rainfall": "Osu",
+    "dashboard.humidity": "Fɔntɔm",
+    "dashboard.condition": "Tebea",
+    "dashboard.soilPh": "Asase pH",
+    "dashboard.moisture": "Fɔntɔm",
+    "dashboard.nutrientBalance": "Aduannuru Nkabom",
+    "dashboard.nitrogen": "Nitrogen",
+    "dashboard.nitrogenDesc": "Ɛho hia ma nhaban nyin na ɛma ɛyɛ ahonoahono.",
+    "dashboard.phosphorus": "Phosphorus",
+    "dashboard.phosphorusDesc": "Ɛboa ma ntini ne nhwiren nyin yiye.",
+    "dashboard.potassium": "Potassium",
+    "dashboard.potassiumDesc": "Ɛma afifide tumi gyina nyarewa ano na ɛma emu yɛ den.",
+
+    "crops.recommendedCrops": "Nnɔbae a Yɛkamfo",
+    "crops.placeholder": "Fa wo asase nsɛm hyɛ ase wɔ ase ha na klik \"Analyze Soil Sample\" na hu nnɔbae a wɔkamfo.",
+    "crops.fuzzyNote": "Wɔkyerɛɛ nsɛm bi fi asase nhwɛso a ɛte saa ara mu (fuzzy match).",
+    "crops.soilSampleInput": "Asase Nhwɛso Nsɛm",
+    "crops.nitrogenLabel": "Nitrogen N (kg/ha)",
+    "crops.phosphorusLabel": "Phosphorus P (kg/ha)",
+    "crops.potassiumLabel": "Potassium K (kg/ha)",
+    "crops.temperatureLabel": "Ɔhyew (°C)",
+    "crops.humidityLabel": "Fɔntɔm (%)",
+    "crops.phLabel": "Asase pH",
+    "crops.rainfallLabel": "Osu (mm)",
+    "crops.hint": "Gyae kwan biara mu kwaadu sɛ wonnim — model no bɛkyerɛ fi asase nhwɛso a ɛte saa ara mu.",
+    "crops.analyzeBtn": "Hwehwɛ Asase Nhwɛso Mu",
+    "crops.analyzing": "Ɛrehwehwɛ Mu...",
+    "crops.randomBtn": "Fa nhwɛso ankasa bi kwa",
+
+    "ideas.insightsTips": "Nteɛso ne Afotu",
+    "ideas.placeholder": "Hwehwɛ asase nhwɛso mu wɔ Nnɔbae tab so na nya afotu wɔ ha.",
+    "ideas.listenToTips": "Tie afotu",
+
+    "summary.sampleSummary": "Nhwɛso Nkyerɛmu",
+    "summary.placeholder": "Wonnhwehwɛɛ nhwɛso biara mu. Wo asase nsɛm bɛba ha.",
+    "summary.source": "Nea Efi",
+    "summary.estimated": "Wɔkyerɛɛ (fuzzy match)",
+    "summary.directReading": "Nhwɛso Tee",
+
+    "cropDetail.subtitle": "Adɛn nti na saa aduane yi fata wo asase",
+
+    "profile.removePhoto": "Yi Mfoni",
+    "profile.personalDetails": "Wo Ho Nsɛm",
+    "profile.saved": "Makora.",
+    "profile.fullName": "Din Mu Nyinaa",
+    "profile.email": "Email",
+    "profile.phone": "Foon Nɔma",
+    "profile.avatarStyle": "Mfoni Su",
+    "profile.male": "Ɔbarima",
+    "profile.female": "Ɔbaa",
+    "profile.saveChanges": "Kora Nsakraeɛ",
+    "profile.loginSecurity": "Akawnt Mu Kɔ ne Bammɔ",
+    "profile.passwordUpdated": "Password asesa.",
+    "profile.currentPassword": "Password a Wode Di Dwuma Seesei",
+    "profile.newPassword": "Password Foforo",
+    "profile.confirmPassword": "Sisi Password Foforo No Mu",
+    "profile.updatePassword": "Sesa Password",
+    "profile.twoFactor": "Akwan Mmienu Bammɔ",
+    "profile.activeSessions": "Mmerɛ a Woda so wɔ Mu",
+    "profile.comingSoon": "Ɛreba",
+    "profile.preferences": "Nea Wopɛ",
+    "profile.darkMode": "Sum Mode",
+    "profile.darkModeSub": "Sesa ntam hann ne sum",
+    "profile.notifications": "Amanneɛbɔ",
+    "profile.notificationsSub": "Nya nsɛm foforo fa wo asase nhwɛso ho",
+    "profile.language": "Kasa",
+    "profile.languageSub": "Paw kasa a wopɛ",
+    "profile.logOut": "Fi Adi",
+  },
+};
+
+let currentLanguage = "en";
+
+function t(key) {
+  return (TRANSLATIONS[currentLanguage] && TRANSLATIONS[currentLanguage][key])
+    || TRANSLATIONS.en[key]
+    || key;
+}
+
+function applyLanguage(lang) {
+  currentLanguage = TRANSLATIONS[lang] ? lang : "en";
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  const activeView = document.querySelector(".view.active");
+  if (activeView) {
+    document.getElementById("page-title").textContent = pageTitle(activeView.dataset.view);
+  }
+}
+
 // ── Auth screens: Welcome / Log In / Sign Up, plus session bootstrap ───────
 const SLIDESHOW_CROPS = [
   "apple", "banana", "cabbage", "carrot", "cashew", "cassava", "coconut",
@@ -63,16 +284,59 @@ function showApp(user) {
   currentUser = user;
   document.getElementById("auth-screen").classList.add("hidden");
   document.getElementById("app-root").classList.remove("hidden");
+  applyTheme(user.theme);
+  applyLanguage(user.language);
   updateProfileView(user);
   showView("dashboard");
   loadRandomSample();
 }
 
-function updateProfileView(user) {
-  document.getElementById("profile-name").textContent = user.full_name;
-  document.getElementById("profile-email").textContent = user.email;
+// ── Avatars: uploaded photo, else an original male/female default icon,
+// else initials. Not a copy of any reference image — simple original shapes. ─
+const DEFAULT_AVATAR_SVG = {
+  male: `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="60" cy="60" r="60" fill="#e7ecf3"/>
+    <circle cx="60" cy="48" r="20" fill="#f2b48a"/>
+    <path d="M60 26c-13 0-22 9-22 20 0 3 1 6 2 8 2-10 10-16 20-16s18 6 20 16c1-2 2-5 2-8 0-11-9-20-22-20z" fill="#3a2a1e"/>
+    <path d="M60 78c22 0 40 16 40 42H20c0-26 18-42 40-42z" fill="#1f3a63"/>
+  </svg>`,
+  female: `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="60" cy="60" r="60" fill="#e7ecf3"/>
+    <path d="M60 20c16 0 28 12 28 30 0 6-1 12-4 16l-3-3c1-11-3-20-9-20-2 7-7 12-12 12s-10-5-12-12c-6 0-10 9-9 20l-3 3c-3-4-4-10-4-16 0-18 12-30 28-30z" fill="#3a2a1e"/>
+    <circle cx="60" cy="50" r="18" fill="#f2b48a"/>
+    <path d="M60 78c22 0 40 16 40 42H20c0-26 18-42 40-42z" fill="#6a3f9e"/>
+  </svg>`,
+};
+
+function avatarMarkup(user) {
+  if (user.avatar_data_url) {
+    return `<img src="${user.avatar_data_url}" alt="">`;
+  }
+  if (user.gender === "male" || user.gender === "female") {
+    return DEFAULT_AVATAR_SVG[user.gender];
+  }
   const initials = user.full_name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  document.getElementById("profile-initials").textContent = initials || "?";
+  return initials || "?";
+}
+
+function renderAvatars(user) {
+  document.getElementById("profile-avatar-display").innerHTML = avatarMarkup(user);
+  document.getElementById("profile-avatar-btn").innerHTML = avatarMarkup(user);
+}
+
+function updateProfileView(user) {
+  document.getElementById("profile-name-display").textContent = user.full_name;
+  document.getElementById("profile-email-display").textContent = user.email;
+  renderAvatars(user);
+
+  document.getElementById("details-name").value = user.full_name;
+  document.getElementById("details-email").value = user.email;
+  document.getElementById("details-phone").value = user.phone || "";
+  document.getElementById("details-gender").value = user.gender || "male";
+
+  document.getElementById("theme-toggle").checked = user.theme === "dark";
+  document.getElementById("notifications-toggle").checked = !!user.notifications_enabled;
+  document.getElementById("language-select").value = user.language || "en";
 }
 
 function setAuthError(id, message) {
@@ -80,6 +344,22 @@ function setAuthError(id, message) {
   if (!message) { el.style.display = "none"; el.textContent = ""; return; }
   el.textContent = message;
   el.style.display = "block";
+}
+
+// Errors carry dynamic server text; successes reuse their static, already
+// translated markup, so only their visibility toggles.
+function showFormError(id, message) {
+  const el = document.getElementById(id);
+  if (!message) { el.classList.add("hidden"); el.textContent = ""; return; }
+  el.textContent = message;
+  el.classList.remove("hidden");
+}
+
+function flashFormSuccess(id) {
+  const el = document.getElementById(id);
+  el.classList.remove("hidden");
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => el.classList.add("hidden"), 2500);
 }
 
 document.getElementById("login-form").addEventListener("submit", async (e) => {
@@ -135,6 +415,146 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
   await fetch("/api/logout", { method: "POST" });
   currentUser = null;
   showAuthScreen();
+});
+
+// ── Personal Details ─────────────────────────────────────────────────────
+document.getElementById("details-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  showFormError("details-error", "");
+  const submitBtn = document.getElementById("details-save-btn");
+  submitBtn.disabled = true;
+  try {
+    const res = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        full_name: document.getElementById("details-name").value,
+        email: document.getElementById("details-email").value,
+        phone: document.getElementById("details-phone").value,
+        gender: document.getElementById("details-gender").value,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not save changes.");
+    currentUser = data;
+    updateProfileView(data);
+    flashFormSuccess("details-success");
+  } catch (err) {
+    showFormError("details-error", err.message);
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+// ── Avatar upload / remove ───────────────────────────────────────────────
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+
+document.getElementById("avatar-edit-btn").addEventListener("click", () => {
+  document.getElementById("avatar-file-input").click();
+});
+
+document.getElementById("avatar-file-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    showFormError("details-error", "Please choose an image file.");
+    return;
+  }
+  if (file.size > MAX_AVATAR_BYTES) {
+    showFormError("details-error", "Image is too large (max 2MB).");
+    return;
+  }
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  await saveAvatar(dataUrl);
+});
+
+document.getElementById("avatar-remove-btn").addEventListener("click", () => saveAvatar(null));
+
+async function saveAvatar(dataUrl) {
+  showFormError("details-error", "");
+  try {
+    const res = await fetch("/api/profile/avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatar_data_url: dataUrl }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not update photo.");
+    currentUser = data;
+    renderAvatars(data);
+    document.getElementById("avatar-remove-btn").classList.toggle("hidden", !data.avatar_data_url);
+  } catch (err) {
+    showFormError("details-error", err.message);
+  }
+}
+
+// ── Login & Security: change password ────────────────────────────────────
+document.getElementById("password-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  showFormError("password-error", "");
+  const newPassword = document.getElementById("new-password").value;
+  const confirmPassword = document.getElementById("confirm-password").value;
+  if (newPassword !== confirmPassword) {
+    showFormError("password-error", "New password and confirmation don't match.");
+    return;
+  }
+  const submitBtn = document.getElementById("password-save-btn");
+  submitBtn.disabled = true;
+  try {
+    const res = await fetch("/api/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        current_password: document.getElementById("current-password").value,
+        new_password: newPassword,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not update password.");
+    document.getElementById("password-form").reset();
+    flashFormSuccess("password-success");
+  } catch (err) {
+    showFormError("password-error", err.message);
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+// ── Preferences: theme, notifications, language ──────────────────────────
+async function savePreference(patch) {
+  const res = await fetch("/api/preferences", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  const data = await res.json();
+  if (res.ok) currentUser = data;
+  return data;
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme === "dark" ? "dark" : "light");
+}
+
+document.getElementById("theme-toggle").addEventListener("change", async (e) => {
+  const theme = e.target.checked ? "dark" : "light";
+  applyTheme(theme);
+  await savePreference({ theme });
+});
+
+document.getElementById("notifications-toggle").addEventListener("change", async (e) => {
+  await savePreference({ notifications_enabled: e.target.checked });
+});
+
+document.getElementById("language-select").addEventListener("change", async (e) => {
+  applyLanguage(e.target.value);
+  await savePreference({ language: e.target.value });
 });
 
 // ── Voice feature: reads English text aloud via the browser's built-in
@@ -310,14 +730,14 @@ function renderResult(data) {
         <div class="crop-bar-track"><div class="crop-bar-fill" style="width:${pct}%"></div></div>
         ${reasons.length ? `
           <button class="reasons-toggle" type="button" aria-expanded="false">
-            <span>Why this crop?</span>
+            <span>${t("dashboard.whyThisCrop")}</span>
             <span class="reasons-chevron">&#9662;</span>
           </button>
           <ul class="crop-reasons" style="display:none;">${reasons.map((r) => `<li>${r}</li>`).join("")}</ul>
         ` : ""}
         <button class="listen-btn" type="button">
           <span class="listen-icon">&#128266;</span>
-          <span class="listen-label">Listen</span>
+          <span class="listen-label">${t("common.listen")}</span>
         </button>
       </div>
     `;
@@ -503,14 +923,14 @@ document.getElementById("ideas-listen-btn").addEventListener("click", () => {
 function renderFields(data) {
   const r = data.readings;
   const rows = [
-    ["Nitrogen (N)", `${r.N.value} kg/ha`],
-    ["Phosphorus (P)", `${r.P.value} kg/ha`],
-    ["Potassium (K)", `${r.K.value} kg/ha`],
-    ["Soil pH", `${r.ph.value} (${r.ph.label})`],
-    ["Humidity", `${r.humidity.value}% (${r.humidity.label})`],
-    ["Temperature", `${r.temperature.value} °C`],
-    ["Rainfall", `${r.rainfall.value} mm`],
-    ["Source", data.used_fuzzy ? "Estimated (fuzzy match)" : "Direct reading"],
+    [`${t("dashboard.nitrogen")} (N)`, `${r.N.value} kg/ha`],
+    [`${t("dashboard.phosphorus")} (P)`, `${r.P.value} kg/ha`],
+    [`${t("dashboard.potassium")} (K)`, `${r.K.value} kg/ha`],
+    [t("dashboard.soilPh"), `${r.ph.value} (${r.ph.label})`],
+    [t("dashboard.humidity"), `${r.humidity.value}% (${r.humidity.label})`],
+    [t("crops.temperatureLabel").replace(" (°C)", ""), `${r.temperature.value} °C`],
+    [t("dashboard.rainfall"), `${r.rainfall.value} mm`],
+    [t("summary.source"), data.used_fuzzy ? t("summary.estimated") : t("summary.directReading")],
   ];
   document.getElementById("field-info").innerHTML = rows.map(([label, value]) => `
     <div class="field-row"><span class="label">${label}</span><span class="value">${value}</span></div>
@@ -520,7 +940,7 @@ function renderFields(data) {
 async function analyze() {
   const btn = document.getElementById("analyze-btn");
   btn.disabled = true;
-  btn.textContent = "Analyzing...";
+  btn.textContent = t("crops.analyzing");
   try {
     const res = await fetch("/api/predict", {
       method: "POST",
@@ -535,7 +955,7 @@ async function analyze() {
     console.error(err);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = "&#129514; Analyze Soil Sample";
+    btn.innerHTML = `&#129514; ${t("crops.analyzeBtn")}`;
   }
 }
 
@@ -550,13 +970,16 @@ document.getElementById("analyze-btn").addEventListener("click", analyze);
 document.getElementById("random-btn").addEventListener("click", loadRandomSample);
 
 // ── Tab navigation ──────────────────────────────────────────────────────
-const TITLES = { dashboard: "Akuafo Ani", crops: "Crops", ideas: "Ideas", fields: "Summary", profile: "Profile" };
+const PAGE_TITLE_KEYS = { dashboard: "app.title", crops: "nav.crops", ideas: "nav.ideas", fields: "nav.summary", profile: "nav.profile" };
+function pageTitle(view) {
+  return t(PAGE_TITLE_KEYS[view] || "app.title");
+}
 
 function showView(view) {
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.view === view));
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   document.querySelector(`.view[data-view="${view}"]`).classList.add("active");
-  document.getElementById("page-title").textContent = TITLES[view] || "";
+  document.getElementById("page-title").textContent = pageTitle(view);
   window.scrollTo({ top: 0, behavior: "instant" });
 }
 

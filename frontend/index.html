@@ -17,57 +17,57 @@
     <div class="auth-welcome-content">
       <div class="auth-logo">&#127793;</div>
       <h1 class="auth-wordmark">AKUAFO ANI</h1>
-      <p class="auth-tagline">Smarter crop choices, straight from your soil.</p>
+      <p class="auth-tagline" data-i18n="auth.tagline">Smarter crop choices, straight from your soil.</p>
     </div>
     <div class="auth-welcome-actions">
-      <button class="auth-btn auth-btn-solid" data-go="login" type="button">Log In</button>
-      <button class="auth-btn auth-btn-outline" data-go="signup" type="button">Sign Up</button>
+      <button class="auth-btn auth-btn-solid" data-go="login" type="button" data-i18n="auth.logIn">Log In</button>
+      <button class="auth-btn auth-btn-outline" data-go="signup" type="button" data-i18n="auth.signUp">Sign Up</button>
     </div>
   </div>
 
   <div class="auth-view" data-auth-view="login">
     <div class="auth-form-panel">
       <button class="auth-back" data-go="welcome" type="button" aria-label="Back">&#8592;</button>
-      <h2 class="auth-heading">Welcome Back</h2>
-      <p class="auth-subheading">Log in to your account</p>
+      <h2 class="auth-heading" data-i18n="auth.welcomeBack">Welcome Back</h2>
+      <p class="auth-subheading" data-i18n="auth.loginSubtitle">Log in to your account</p>
       <div class="auth-error" id="login-error" style="display:none;"></div>
       <form id="login-form">
         <label class="auth-field">
-          <span>Email</span>
+          <span data-i18n="auth.email">Email</span>
           <input type="email" id="login-email" required autocomplete="email" placeholder="you@example.com">
         </label>
         <label class="auth-field">
-          <span>Password</span>
+          <span data-i18n="auth.password">Password</span>
           <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••">
         </label>
-        <button class="auth-btn auth-btn-solid" type="submit" id="login-submit">Log In</button>
+        <button class="auth-btn auth-btn-solid" type="submit" id="login-submit" data-i18n="auth.logIn">Log In</button>
       </form>
-      <p class="auth-switch">Don't have an account? <a href="#" data-go="signup">Sign Up</a></p>
+      <p class="auth-switch"><span data-i18n="auth.noAccount">Don't have an account?</span> <a href="#" data-go="signup" data-i18n="auth.signUp">Sign Up</a></p>
     </div>
   </div>
 
   <div class="auth-view" data-auth-view="signup">
     <div class="auth-form-panel">
       <button class="auth-back" data-go="welcome" type="button" aria-label="Back">&#8592;</button>
-      <h2 class="auth-heading">Create Account</h2>
-      <p class="auth-subheading">Sign up to get started</p>
+      <h2 class="auth-heading" data-i18n="auth.createAccount">Create Account</h2>
+      <p class="auth-subheading" data-i18n="auth.signupSubtitle">Sign up to get started</p>
       <div class="auth-error" id="signup-error" style="display:none;"></div>
       <form id="signup-form">
         <label class="auth-field">
-          <span>Full Name</span>
+          <span data-i18n="auth.fullName">Full Name</span>
           <input type="text" id="signup-name" required autocomplete="name" placeholder="Kwame Mensah">
         </label>
         <label class="auth-field">
-          <span>Email</span>
+          <span data-i18n="auth.email">Email</span>
           <input type="email" id="signup-email" required autocomplete="email" placeholder="you@example.com">
         </label>
         <label class="auth-field">
-          <span>Password</span>
+          <span data-i18n="auth.password">Password</span>
           <input type="password" id="signup-password" required autocomplete="new-password" placeholder="At least 6 characters">
         </label>
-        <button class="auth-btn auth-btn-solid" type="submit" id="signup-submit">Sign Up</button>
+        <button class="auth-btn auth-btn-solid" type="submit" id="signup-submit" data-i18n="auth.signUp">Sign Up</button>
       </form>
-      <p class="auth-switch">Already have an account? <a href="#" data-go="login">Log In</a></p>
+      <p class="auth-switch"><span data-i18n="auth.haveAccount">Already have an account?</span> <a href="#" data-go="login" data-i18n="auth.logIn">Log In</a></p>
     </div>
   </div>
 </div>
@@ -82,7 +82,7 @@
     <h1 class="page-title" id="page-title">Akuafo Ani</h1>
     <div class="topbar-actions">
       <span class="icon-btn" title="Notifications">&#128276;</span>
-      <span class="avatar" id="profile-avatar-btn" title="Profile">&#128100;</span>
+      <span class="avatar" id="profile-avatar-btn" title="Profile"></span>
     </div>
   </header>
 
@@ -92,12 +92,12 @@
     <div class="view active" data-view="dashboard">
 
       <section class="section-header top-header">
-        <h3>Top Recommendation</h3>
+        <h3 data-i18n="dashboard.topRecommendation">Top Recommendation</h3>
       </section>
 
       <section class="card top-pick" id="top-pick">
         <img class="top-pick-img" id="top-pick-img" alt="" style="display:none;">
-        <div class="placeholder-text" id="top-pick-placeholder">Run an analysis on the Crops tab to see your top crop pick here.</div>
+        <div class="placeholder-text" id="top-pick-placeholder" data-i18n="dashboard.topPickPlaceholder">Run an analysis on the Crops tab to see your top crop pick here.</div>
         <div class="top-pick-overlay" id="top-pick-overlay" style="display:none;">
           <span class="crop-rank top">1</span>
           <div class="top-pick-info">
@@ -109,13 +109,13 @@
 
       <section class="card why-card" id="why-card" style="display:none;">
         <button class="why-toggle" id="why-toggle" type="button" aria-expanded="false">
-          <span>Why this crop?</span>
+          <span data-i18n="dashboard.whyThisCrop">Why this crop?</span>
           <span class="why-chevron" id="why-chevron">&#9662;</span>
         </button>
         <ul class="why-list" id="why-list" style="display:none;"></ul>
         <button class="listen-btn" id="why-listen-btn" type="button">
           <span class="listen-icon">&#128266;</span>
-          <span class="listen-label">Listen</span>
+          <span class="listen-label" data-i18n="common.listen">Listen</span>
         </button>
       </section>
 
@@ -125,7 +125,7 @@
             <span class="weather-pin">&#128205;</span>
             <div>
               <div class="weather-place">KNUST</div>
-              <div class="weather-sub">Soil Weather Today</div>
+              <div class="weather-sub" data-i18n="dashboard.soilWeatherToday">Soil Weather Today</div>
             </div>
           </div>
           <div class="weather-temp-block">
@@ -136,30 +136,30 @@
         <div class="weather-stats">
           <div class="weather-stat">
             <span class="weather-stat-icon">&#127783;&#65039;</span>
-            <span class="weather-stat-label">Rainfall</span>
+            <span class="weather-stat-label" data-i18n="dashboard.rainfall">Rainfall</span>
             <span class="weather-stat-value" id="weather-rainfall-value">-- mm</span>
           </div>
           <div class="weather-stat">
             <span class="weather-stat-icon">&#128167;</span>
-            <span class="weather-stat-label">Humidity</span>
+            <span class="weather-stat-label" data-i18n="dashboard.humidity">Humidity</span>
             <span class="weather-stat-value" id="weather-humidity-value">--%</span>
           </div>
           <div class="weather-stat">
             <span class="weather-stat-icon">&#127777;&#65039;</span>
-            <span class="weather-stat-label">Condition</span>
+            <span class="weather-stat-label" data-i18n="dashboard.condition">Condition</span>
             <span class="weather-stat-value" id="weather-condition-value">--</span>
           </div>
         </div>
         <div class="weather-gauges">
           <div class="gauge-block">
-            <div class="gauge-title">Soil pH</div>
+            <div class="gauge-title" data-i18n="dashboard.soilPh">Soil pH</div>
             <div class="gauge" id="gauge-ph">
               <div class="gauge-value" id="ph-value">--</div>
             </div>
             <div class="gauge-label" id="ph-label">--</div>
           </div>
           <div class="gauge-block">
-            <div class="gauge-title">Moisture</div>
+            <div class="gauge-title" data-i18n="dashboard.moisture">Moisture</div>
             <div class="gauge" id="gauge-moisture">
               <div class="gauge-value" id="moisture-value">--%</div>
             </div>
@@ -169,7 +169,7 @@
       </section>
 
       <section class="section-header">
-        <h3>Nutrient Balance</h3>
+        <h3 data-i18n="dashboard.nutrientBalance">Nutrient Balance</h3>
         <span class="info-icon" title="N, P and K shown as a share of their combined kg/ha">&#9432;</span>
       </section>
 
@@ -177,8 +177,8 @@
         <div class="nutrient-head">
           <span class="nutrient-icon n">N</span>
           <div>
-            <div class="nutrient-title">Nitrogen</div>
-            <div class="nutrient-desc">Essential for leaf growth and lush green foliage.</div>
+            <div class="nutrient-title" data-i18n="dashboard.nitrogen">Nitrogen</div>
+            <div class="nutrient-desc" data-i18n="dashboard.nitrogenDesc">Essential for leaf growth and lush green foliage.</div>
           </div>
         </div>
         <div class="nutrient-value-row">
@@ -193,8 +193,8 @@
           <div class="nutrient-head">
             <span class="nutrient-icon p">P</span>
             <div>
-              <div class="nutrient-title">Phosphorus</div>
-              <div class="nutrient-desc">Supports strong root and flower development.</div>
+              <div class="nutrient-title" data-i18n="dashboard.phosphorus">Phosphorus</div>
+              <div class="nutrient-desc" data-i18n="dashboard.phosphorusDesc">Supports strong root and flower development.</div>
             </div>
           </div>
           <div class="nutrient-value-row">
@@ -207,8 +207,8 @@
           <div class="nutrient-head">
             <span class="nutrient-icon k">K</span>
             <div>
-              <div class="nutrient-title">Potassium</div>
-              <div class="nutrient-desc">Boosts disease resistance and overall plant strength.</div>
+              <div class="nutrient-title" data-i18n="dashboard.potassium">Potassium</div>
+              <div class="nutrient-desc" data-i18n="dashboard.potassiumDesc">Boosts disease resistance and overall plant strength.</div>
             </div>
           </div>
           <div class="nutrient-value-row">
@@ -225,36 +225,36 @@
     <div class="view" data-view="crops">
 
       <section class="section-header top-header">
-        <h3>Recommended Crops</h3>
+        <h3 data-i18n="crops.recommendedCrops">Recommended Crops</h3>
       </section>
 
       <section class="card recommendations" id="recommendations">
-        <div class="placeholder-text">Enter your soil readings below and click "Analyze Soil Sample" to see crop recommendations.</div>
+        <div class="placeholder-text" data-i18n="crops.placeholder">Enter your soil readings below and click "Analyze Soil Sample" to see crop recommendations.</div>
       </section>
 
       <div class="cert-text" id="fuzzy-note" style="display:none;">
-        &#9888; Some values were estimated from similar soil samples (fuzzy match).
+        &#9888; <span data-i18n="crops.fuzzyNote">Some values were estimated from similar soil samples (fuzzy match).</span>
       </div>
 
       <section class="section-header">
-        <h3>Soil Sample Input</h3>
+        <h3 data-i18n="crops.soilSampleInput">Soil Sample Input</h3>
       </section>
 
       <section class="card sample-form">
         <div class="form-grid">
-          <label>Nitrogen N (kg/ha)<input type="number" id="in-N" placeholder="e.g. 90"></label>
-          <label>Phosphorus P (kg/ha)<input type="number" id="in-P" placeholder="e.g. 42"></label>
-          <label>Potassium K (kg/ha)<input type="number" id="in-K" placeholder="e.g. 43"></label>
-          <label>Temperature (&deg;C)<input type="number" id="in-temperature" placeholder="e.g. 25"></label>
-          <label>Humidity (%)<input type="number" id="in-humidity" placeholder="e.g. 80"></label>
-          <label>Soil pH<input type="number" step="0.1" id="in-ph" placeholder="e.g. 6.5"></label>
-          <label>Rainfall (mm)<input type="number" id="in-rainfall" placeholder="e.g. 200"></label>
+          <label><span data-i18n="crops.nitrogenLabel">Nitrogen N (kg/ha)</span><input type="number" id="in-N" placeholder="e.g. 90"></label>
+          <label><span data-i18n="crops.phosphorusLabel">Phosphorus P (kg/ha)</span><input type="number" id="in-P" placeholder="e.g. 42"></label>
+          <label><span data-i18n="crops.potassiumLabel">Potassium K (kg/ha)</span><input type="number" id="in-K" placeholder="e.g. 43"></label>
+          <label><span data-i18n="crops.temperatureLabel">Temperature (&deg;C)</span><input type="number" id="in-temperature" placeholder="e.g. 25"></label>
+          <label><span data-i18n="crops.humidityLabel">Humidity (%)</span><input type="number" id="in-humidity" placeholder="e.g. 80"></label>
+          <label><span data-i18n="crops.phLabel">Soil pH</span><input type="number" step="0.1" id="in-ph" placeholder="e.g. 6.5"></label>
+          <label><span data-i18n="crops.rainfallLabel">Rainfall (mm)</span><input type="number" id="in-rainfall" placeholder="e.g. 200"></label>
         </div>
-        <p class="form-hint">Leave any field blank if unknown &mdash; the model will estimate it from similar soil samples.</p>
+        <p class="form-hint" data-i18n="crops.hint">Leave any field blank if unknown &mdash; the model will estimate it from similar soil samples.</p>
       </section>
 
-      <button class="primary-btn" id="analyze-btn">&#129514; Analyze Soil Sample</button>
-      <button class="ghost-btn" id="random-btn">Load a random real sample</button>
+      <button class="primary-btn" id="analyze-btn">&#129514; <span data-i18n="crops.analyzeBtn">Analyze Soil Sample</span></button>
+      <button class="ghost-btn" id="random-btn" data-i18n="crops.randomBtn">Load a random real sample</button>
 
     </div>
 
@@ -262,16 +262,16 @@
     <div class="view" data-view="ideas">
 
       <section class="section-header top-header">
-        <h3>Insights &amp; Tips</h3>
+        <h3 data-i18n="ideas.insightsTips">Insights &amp; Tips</h3>
       </section>
 
       <section class="card" id="ideas-box">
-        <div class="placeholder-text">Analyze a soil sample on the Crops tab to get tailored tips here.</div>
+        <div class="placeholder-text" data-i18n="ideas.placeholder">Analyze a soil sample on the Crops tab to get tailored tips here.</div>
       </section>
 
       <button class="listen-btn" id="ideas-listen-btn" type="button" style="display:none;">
         <span class="listen-icon">&#128266;</span>
-        <span class="listen-label">Listen to tips</span>
+        <span class="listen-label" data-i18n="ideas.listenToTips">Listen to tips</span>
       </button>
 
     </div>
@@ -280,11 +280,11 @@
     <div class="view" data-view="fields">
 
       <section class="section-header top-header">
-        <h3>Sample Summary</h3>
+        <h3 data-i18n="summary.sampleSummary">Sample Summary</h3>
       </section>
 
       <section class="card field-info-card" id="field-info">
-        <div class="placeholder-text">No sample analyzed yet. Your soil readings will appear here.</div>
+        <div class="placeholder-text" data-i18n="summary.placeholder">No sample analyzed yet. Your soil readings will appear here.</div>
       </section>
 
     </div>
@@ -293,27 +293,138 @@
     <div class="view" data-view="profile">
 
       <section class="card profile-card">
-        <div class="profile-avatar" id="profile-initials">?</div>
-        <div class="profile-name" id="profile-name">—</div>
-        <div class="profile-email" id="profile-email">—</div>
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar" id="profile-avatar-display"></div>
+          <button class="avatar-edit-btn" id="avatar-edit-btn" type="button" title="Change photo">&#128247;</button>
+          <input type="file" id="avatar-file-input" accept="image/*" capture="user" class="hidden">
+        </div>
+        <div class="profile-name" id="profile-name-display">—</div>
+        <div class="profile-email" id="profile-email-display">—</div>
+        <button class="ghost-btn avatar-remove-btn hidden" id="avatar-remove-btn" type="button" data-i18n="profile.removePhoto">Remove photo</button>
       </section>
 
-      <button class="ghost-btn logout-btn" id="logout-btn" type="button">Log Out</button>
+      <section class="section-header top-header">
+        <h3 data-i18n="profile.personalDetails">Personal Details</h3>
+      </section>
+
+      <section class="card profile-form-card">
+        <div class="form-error hidden" id="details-error"></div>
+        <div class="form-success hidden" id="details-success" data-i18n="profile.saved">Saved.</div>
+        <form id="details-form">
+          <label class="profile-field">
+            <span data-i18n="profile.fullName">Full Name</span>
+            <input type="text" id="details-name" required>
+          </label>
+          <label class="profile-field">
+            <span data-i18n="profile.email">Email</span>
+            <input type="email" id="details-email" required>
+          </label>
+          <label class="profile-field">
+            <span data-i18n="profile.phone">Phone Number</span>
+            <input type="tel" id="details-phone" placeholder="+233 24 123 4567">
+          </label>
+          <label class="profile-field">
+            <span data-i18n="profile.avatarStyle">Avatar Style</span>
+            <select id="details-gender">
+              <option value="male" data-i18n="profile.male">Male</option>
+              <option value="female" data-i18n="profile.female">Female</option>
+            </select>
+          </label>
+          <button class="primary-btn" type="submit" id="details-save-btn" data-i18n="profile.saveChanges">Save Changes</button>
+        </form>
+      </section>
+
+      <section class="section-header">
+        <h3 data-i18n="profile.loginSecurity">Login &amp; Security</h3>
+      </section>
+
+      <section class="card profile-form-card">
+        <div class="form-error hidden" id="password-error"></div>
+        <div class="form-success hidden" id="password-success" data-i18n="profile.passwordUpdated">Password updated.</div>
+        <form id="password-form">
+          <label class="profile-field">
+            <span data-i18n="profile.currentPassword">Current Password</span>
+            <input type="password" id="current-password" required autocomplete="current-password">
+          </label>
+          <label class="profile-field">
+            <span data-i18n="profile.newPassword">New Password</span>
+            <input type="password" id="new-password" required autocomplete="new-password" placeholder="At least 6 characters">
+          </label>
+          <label class="profile-field">
+            <span data-i18n="profile.confirmPassword">Confirm New Password</span>
+            <input type="password" id="confirm-password" required autocomplete="new-password">
+          </label>
+          <button class="primary-btn" type="submit" id="password-save-btn" data-i18n="profile.updatePassword">Update Password</button>
+        </form>
+        <div class="security-note">
+          <span>&#128274;</span>
+          <div>
+            <div class="security-note-title" data-i18n="profile.twoFactor">Two-Factor Authentication</div>
+            <div class="security-note-sub" data-i18n="profile.comingSoon">Coming soon</div>
+          </div>
+        </div>
+        <div class="security-note">
+          <span>&#128241;</span>
+          <div>
+            <div class="security-note-title" data-i18n="profile.activeSessions">Active Sessions</div>
+            <div class="security-note-sub" data-i18n="profile.comingSoon">Coming soon</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-header">
+        <h3 data-i18n="profile.preferences">Preferences</h3>
+      </section>
+
+      <section class="card profile-form-card">
+        <div class="pref-row">
+          <div>
+            <div class="pref-title" data-i18n="profile.darkMode">Dark Mode</div>
+            <div class="pref-sub" data-i18n="profile.darkModeSub">Switch between light and dark themes</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="theme-toggle">
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div class="pref-row">
+          <div>
+            <div class="pref-title" data-i18n="profile.notifications">Notifications</div>
+            <div class="pref-sub" data-i18n="profile.notificationsSub">Get updates about your soil samples</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="notifications-toggle" checked>
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div class="pref-row">
+          <div>
+            <div class="pref-title" data-i18n="profile.language">Language</div>
+            <div class="pref-sub" data-i18n="profile.languageSub">Choose your preferred language</div>
+          </div>
+          <select id="language-select" class="lang-select">
+            <option value="en">English</option>
+            <option value="tw">Twi</option>
+          </select>
+        </div>
+      </section>
+
+      <button class="ghost-btn logout-btn" id="logout-btn" type="button" data-i18n="profile.logOut">Log Out</button>
 
     </div>
 
   </main>
 
   <nav class="bottom-nav">
-    <div class="nav-item active" data-view="dashboard"><span>&#128200;</span>Dashboard</div>
-    <div class="nav-item" data-view="crops"><span>&#127807;</span>Crops</div>
-    <div class="nav-item" data-view="ideas"><span>&#128161;</span>Ideas</div>
-    <div class="nav-item" data-view="fields"><span>&#128506;&#65039;</span>Summary</div>
+    <div class="nav-item active" data-view="dashboard"><span>&#128200;</span><span data-i18n="nav.dashboard">Dashboard</span></div>
+    <div class="nav-item" data-view="crops"><span>&#127807;</span><span data-i18n="nav.crops">Crops</span></div>
+    <div class="nav-item" data-view="ideas"><span>&#128161;</span><span data-i18n="nav.ideas">Ideas</span></div>
+    <div class="nav-item" data-view="fields"><span>&#128506;&#65039;</span><span data-i18n="nav.summary">Summary</span></div>
   </nav>
 
   <div class="crop-detail-overlay" id="crop-detail-overlay">
     <div class="crop-detail-panel">
-      <button class="back-btn" id="crop-detail-back">&#8592; Back</button>
+      <button class="back-btn" id="crop-detail-back">&#8592; <span data-i18n="common.back">Back</span></button>
       <div class="crop-detail-img-wrap">
         <img class="crop-detail-img" id="crop-detail-img" alt="">
       </div>
@@ -322,11 +433,11 @@
           <div class="crop-detail-name" id="crop-detail-name"></div>
           <div class="crop-detail-conf" id="crop-detail-conf"></div>
         </div>
-        <div class="crop-detail-subtitle">Why this crop matches your soil</div>
+        <div class="crop-detail-subtitle" data-i18n="cropDetail.subtitle">Why this crop matches your soil</div>
         <ul class="crop-detail-reasons" id="crop-detail-reasons"></ul>
         <button class="listen-btn" id="crop-detail-listen-btn" type="button">
           <span class="listen-icon">&#128266;</span>
-          <span class="listen-label">Listen</span>
+          <span class="listen-label" data-i18n="common.listen">Listen</span>
         </button>
       </div>
     </div>

@@ -68,6 +68,16 @@ def _get_db():
     return conn
 
 
+USER_COLUMNS = {
+    "phone": "TEXT",
+    "gender": "TEXT",
+    "avatar_data_url": "TEXT",
+    "theme": "TEXT NOT NULL DEFAULT 'light'",
+    "notifications_enabled": "INTEGER NOT NULL DEFAULT 1",
+    "language": "TEXT NOT NULL DEFAULT 'en'",
+}
+
+
 def _init_db():
     with _get_db() as conn:
         conn.execute(
@@ -81,6 +91,10 @@ def _init_db():
             )
             """
         )
+        existing = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+        for col, decl in USER_COLUMNS.items():
+            if col not in existing:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {col} {decl}")
 
 
 _init_db()
@@ -240,7 +254,24 @@ def index():
 
 
 def _user_public(row):
-    return {"full_name": row["full_name"], "email": row["email"], "created_at": row["created_at"]}
+    return {
+        "full_name": row["full_name"],
+        "email": row["email"],
+        "created_at": row["created_at"],
+        "phone": row["phone"],
+        "gender": row["gender"],
+        "avatar_data_url": row["avatar_data_url"],
+        "theme": row["theme"],
+        "notifications_enabled": bool(row["notifications_enabled"]),
+        "language": row["language"],
+    }
+
+
+def _current_user_row(conn):
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
 
 
 @app.route("/api/signup", methods=["POST"])
@@ -301,6 +332,126 @@ def me():
     if not row:
         session.pop("user_id", None)
         return jsonify({"error": "Not logged in."}), 401
+    return jsonify(_user_public(row))
+
+
+@app.route("/api/profile", methods=["PATCH"])
+def update_profile():
+    body = request.get_json(force=True) or {}
+
+    with _get_db() as conn:
+        row = _current_user_row(conn)
+        if not row:
+            return jsonify({"error": "Not logged in."}), 401
+
+        updates = {}
+
+        if "full_name" in body:
+            full_name = (body["full_name"] or "").strip()
+            if not full_name:
+                return jsonify({"error": "Full name can't be empty."}), 400
+            updates["full_name"] = full_name
+
+        if "email" in body:
+            email = (body["email"] or "").strip().lower()
+            if not email:
+                return jsonify({"error": "Email can't be empty."}), 400
+            clash = conn.execute(
+                "SELECT id FROM users WHERE email = ? AND id != ?", (email, row["id"])
+            ).fetchone()
+            if clash:
+                return jsonify({"error": "An account with this email already exists."}), 409
+            updates["email"] = email
+
+        if "phone" in body:
+            updates["phone"] = (body["phone"] or "").strip()
+
+        if "gender" in body:
+            gender = body["gender"] or None
+            if gender not in (None, "male", "female"):
+                return jsonify({"error": "Invalid gender value."}), 400
+            updates["gender"] = gender
+
+        if updates:
+            set_clause = ", ".join(f"{col} = ?" for col in updates)
+            conn.execute(f"UPDATE users SET {set_clause} WHERE id = ?", (*updates.values(), row["id"]))
+            row = conn.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
+
+    return jsonify(_user_public(row))
+
+
+MAX_AVATAR_DATA_URL_LEN = 2_800_000  # ~2MB image, base64-encoded
+
+
+@app.route("/api/profile/avatar", methods=["POST"])
+def update_avatar():
+    body = request.get_json(force=True) or {}
+    data_url = body.get("avatar_data_url") or None
+
+    if data_url is not None:
+        if not data_url.startswith("data:image/"):
+            return jsonify({"error": "Invalid image data."}), 400
+        if len(data_url) > MAX_AVATAR_DATA_URL_LEN:
+            return jsonify({"error": "Image is too large (max ~2MB)."}), 400
+
+    with _get_db() as conn:
+        row = _current_user_row(conn)
+        if not row:
+            return jsonify({"error": "Not logged in."}), 401
+        conn.execute("UPDATE users SET avatar_data_url = ? WHERE id = ?", (data_url, row["id"]))
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
+
+    return jsonify(_user_public(row))
+
+
+@app.route("/api/change-password", methods=["POST"])
+def change_password():
+    body = request.get_json(force=True) or {}
+    current_password = body.get("current_password") or ""
+    new_password = body.get("new_password") or ""
+
+    with _get_db() as conn:
+        row = _current_user_row(conn)
+        if not row:
+            return jsonify({"error": "Not logged in."}), 401
+        if not check_password_hash(row["password_hash"], current_password):
+            return jsonify({"error": "Current password is incorrect."}), 401
+        if len(new_password) < 6:
+            return jsonify({"error": "New password must be at least 6 characters."}), 400
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (generate_password_hash(new_password), row["id"]),
+        )
+
+    return jsonify({"ok": True})
+
+
+@app.route("/api/preferences", methods=["PATCH"])
+def update_preferences():
+    body = request.get_json(force=True) or {}
+
+    with _get_db() as conn:
+        row = _current_user_row(conn)
+        if not row:
+            return jsonify({"error": "Not logged in."}), 401
+
+        updates = {}
+        if "theme" in body:
+            if body["theme"] not in ("light", "dark"):
+                return jsonify({"error": "Invalid theme."}), 400
+            updates["theme"] = body["theme"]
+        if "notifications_enabled" in body:
+            updates["notifications_enabled"] = 1 if body["notifications_enabled"] else 0
+        if "language" in body:
+            if body["language"] not in ("en", "tw"):
+                return jsonify({"error": "Invalid language."}), 400
+            updates["language"] = body["language"]
+
+        if updates:
+            set_clause = ", ".join(f"{col} = ?" for col in updates)
+            conn.execute(f"UPDATE users SET {set_clause} WHERE id = ?", (*updates.values(), row["id"]))
+            row = conn.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
+
     return jsonify(_user_public(row))
 
 
