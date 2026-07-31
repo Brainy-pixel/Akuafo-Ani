@@ -10,3 +10,7 @@ services:
         value: 3.12.7
       - key: SECRET_KEY
         generateValue: true
+      - key: DATABASE_URL
+        sync: false  # set manually in the Render dashboard — a Postgres
+                     # connection string (e.g. from Neon), so accounts
+                     # survive redeploys instead of living on local disk

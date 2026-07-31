@@ -36,12 +36,15 @@ blank if you don't know it — the model will estimate it from similar
 samples) and click **Analyze Soil Sample** to get the top-3 recommended
 crops for that soil.
 
-Sign up or log in to use the app — accounts are stored in `users.db`
-(SQLite, created automatically on first run) with hashed passwords.
+Sign up or log in to use the app — accounts are stored locally in `users.db`
+(SQLite, created automatically on first run) with hashed passwords. In
+production, set the `DATABASE_URL` env var to use Postgres instead (see
+below) — Render's local disk isn't guaranteed to survive a redeploy, so
+accounts need to live in a real external database to persist reliably.
 
 ## Deploying to Render (free, permanent URL)
 
-This repo includes `render.yaml`, so Render can configure everything
+This repo includes `render.yaml`, so Render can configure most of this
 automatically via its "Blueprint" deploy:
 
 1. Push this repo to GitHub.
@@ -52,8 +55,18 @@ automatically via its "Blueprint" deploy:
 3. Once deployed, the app is reachable at a stable
    `https://akuafo-ani.onrender.com`-style URL that doesn't expire.
 
-**Note:** the free tier's disk is not guaranteed to persist across
-redeploys, so `users.db` (sign-ups) could reset when you redeploy. This is
-fine for demoing; if you need accounts to survive redeploys long-term,
-swap SQLite for a hosted database (e.g. a free Postgres instance) — ask
-and I can help wire that up.
+### Making accounts persistent (Postgres)
+
+Render's free-tier disk isn't guaranteed to survive a redeploy, so without
+a real database, sign-ups in `users.db` could vanish the next time you
+push a change. Fix:
+
+1. Create a free Postgres database at [neon.tech](https://neon.tech) (or
+   Supabase, or any Postgres host) — sign up, create a project, and copy
+   the **pooled** connection string it gives you (starts with
+   `postgres://` or `postgresql://`).
+2. In the Render dashboard, open the `akuafo-ani` service → **Environment**
+   → add `DATABASE_URL` with that connection string as the value.
+3. Redeploy. The app detects `DATABASE_URL` automatically and switches from
+   SQLite to Postgres — no code changes needed. Locally, leave
+   `DATABASE_URL` unset and it keeps using SQLite as before.

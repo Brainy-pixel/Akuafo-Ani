@@ -4,8 +4,9 @@ Akuafo Ani — local web server.
 Loads the trained crop-recommendation model and serves:
   - the dashboard web page (frontend/)
   - a JSON prediction API at POST /api/predict
-  - account signup/login/logout (SQLite-backed) at /api/signup, /api/login,
-    /api/logout, /api/me
+  - account signup/login/logout at /api/signup, /api/login, /api/logout,
+    /api/me — backed by SQLite locally, or Postgres in production when a
+    DATABASE_URL env var is set (see _get_db below).
 
 Run with:
     python app.py
@@ -13,7 +14,6 @@ Then open http://127.0.0.1:5000 in your browser.
 """
 import os
 import secrets
-import sqlite3
 from datetime import datetime, timezone
 
 import numpy as np
@@ -62,10 +62,76 @@ app.secret_key = _load_or_create_secret_key()
 app.config.update(SESSION_COOKIE_SAMESITE="Lax")
 
 
-def _get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+# Emails are always lowercased before storage/lookup (see signup/login), so
+# no case-insensitive collation is needed at the schema level in either DB.
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    # Production: Postgres (e.g. a free Neon/Supabase database). Render's
+    # own disk is not guaranteed to survive a redeploy, so accounts must
+    # live in an external, persistent database.
+    import psycopg2
+    import psycopg2.extras
+
+    class _PgConn:
+        """Wraps a psycopg2 connection so call sites can use conn.execute(...)
+        the same way they would with sqlite3.Connection."""
+
+        def __init__(self, conn):
+            self._conn = conn
+
+        def execute(self, sql, params=()):
+            cur = self._conn.cursor()
+            cur.execute(sql.replace("?", "%s"), params)
+            return cur
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            (self._conn.rollback() if exc_type else self._conn.commit())
+            self._conn.close()
+
+    def _get_db():
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+        return _PgConn(conn)
+
+    _USERS_TABLE_SQL = """
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            full_name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """
+
+    def _existing_user_columns(conn):
+        return {row["name"] for row in conn.execute(
+            "SELECT column_name AS name FROM information_schema.columns WHERE table_name = 'users'"
+        )}
+
+else:
+    # Local dev: zero-config SQLite file.
+    import sqlite3
+
+    def _get_db():
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    _USERS_TABLE_SQL = """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """
+
+    def _existing_user_columns(conn):
+        return {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
 
 
 USER_COLUMNS = {
@@ -80,18 +146,8 @@ USER_COLUMNS = {
 
 def _init_db():
     with _get_db() as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                full_name TEXT NOT NULL,
-                email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-                password_hash TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-            """
-        )
-        existing = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+        conn.execute(_USERS_TABLE_SQL)
+        existing = _existing_user_columns(conn)
         for col, decl in USER_COLUMNS.items():
             if col not in existing:
                 conn.execute(f"ALTER TABLE users ADD COLUMN {col} {decl}")
