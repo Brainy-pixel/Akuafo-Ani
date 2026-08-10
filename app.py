@@ -13,8 +13,11 @@ Run with:
 Then open http://127.0.0.1:5000 in your browser.
 """
 import os
+import json
 import secrets
-from datetime import datetime, timezone
+import urllib.request
+import urllib.parse
+from datetime import datetime, date, timedelta, timezone
 
 import numpy as np
 import pandas as pd
@@ -40,6 +43,9 @@ FEATURE_META = {
 }
 
 app = Flask(__name__, static_folder="frontend", static_url_path="")
+
+# OpenWeatherMap API key — set OPENWEATHER_API_KEY in your environment / Render settings.
+OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
 
 
 def _load_or_create_secret_key():
@@ -566,6 +572,79 @@ def random_sample():
     """Returns a random real row from the dataset, useful as a demo starting point."""
     row = df.sample(1).iloc[0]
     return jsonify({f: float(row[f]) for f in FEATURES} | {"label": row["label"]})
+
+
+@app.route("/api/weather")
+def get_weather():
+    """Proxy to OpenWeatherMap current-weather (keeps API key server-side).
+    Returns location name, temperature, humidity, description, and hourly rain."""
+    lat = request.args.get("lat", "").strip()
+    lon = request.args.get("lon", "").strip()
+    if not lat or not lon:
+        return jsonify({"error": "lat and lon query params are required"}), 400
+    if not OPENWEATHER_API_KEY:
+        return jsonify({"error": "Weather service not configured — add OPENWEATHER_API_KEY to env"}), 503
+
+    try:
+        params = urllib.parse.urlencode({
+            "lat": lat, "lon": lon,
+            "appid": OPENWEATHER_API_KEY,
+            "units": "metric",
+        })
+        url = f"https://api.openweathermap.org/data/2.5/weather?{params}"
+        req = urllib.request.Request(url, headers={"User-Agent": "AkuafoAni/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            w = json.loads(resp.read().decode())
+
+        rain_raw = w.get("rain") or {}
+        rain_mm = round(float(rain_raw.get("1h") or rain_raw.get("3h") or 0), 2)
+
+        return jsonify({
+            "location": w.get("name", ""),
+            "country": (w.get("sys") or {}).get("country", ""),
+            "temperature": (w.get("main") or {}).get("temp"),
+            "humidity": (w.get("main") or {}).get("humidity"),
+            "description": ((w.get("weather") or [{}])[0]).get("description", "").title(),
+            "icon_code": ((w.get("weather") or [{}])[0]).get("icon", ""),
+            "rain_mm_hr": rain_mm,
+            "wind_speed": (w.get("wind") or {}).get("speed"),
+        })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 502
+
+
+@app.route("/api/rainfall")
+def get_annual_rainfall():
+    """Returns the total annual rainfall (mm) for the given GPS location by
+    summing the past 365 days of daily precipitation from Open-Meteo's free
+    historical archive (no API key required).  This value pre-fills the Rainfall
+    input on the Crops form so farmers don't have to look it up manually."""
+    lat = request.args.get("lat", "").strip()
+    lon = request.args.get("lon", "").strip()
+    if not lat or not lon:
+        return jsonify({"error": "lat and lon query params are required"}), 400
+
+    try:
+        end = date.today()
+        start = end - timedelta(days=365)
+        params = urllib.parse.urlencode({
+            "latitude": lat,
+            "longitude": lon,
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "daily": "precipitation_sum",
+            "timezone": "auto",
+        })
+        url = f"https://archive-api.open-meteo.com/v1/archive?{params}"
+        req = urllib.request.Request(url, headers={"User-Agent": "AkuafoAni/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode())
+
+        precip_list = (data.get("daily") or {}).get("precipitation_sum") or []
+        annual_mm = round(sum(v for v in precip_list if v is not None), 1)
+        return jsonify({"annual_mm": annual_mm})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 502
 
 
 if __name__ == "__main__":

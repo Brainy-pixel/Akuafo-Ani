@@ -380,22 +380,21 @@ function showApp(user) {
   resetDashboardState();
   showView("dashboard");
   initCropsHero();
+  loadWeather(); // kick off GPS → OWM + Open-Meteo in the background
 }
 
-// Swaps the Dashboard section-header between "Welcome, {name}" (script
-// style, before any analysis) and "Top Recommendation" (after analysis) —
-// same slot, so the greeting sits exactly where the heading normally does.
+// Switches the Dashboard heading between "Welcome, {FirstName}" (pre-analysis)
+// and "Top Recommendation" (post-analysis).  Both states use Aptos Display —
+// no font class toggling needed, the heading rule covers both.
 function updateWelcomeHeading() {
   if (!currentUser) return;
   const el = document.getElementById("dashboard-heading");
   if (!el) return;
   if (lastData) {
     el.textContent = t("dashboard.topRecommendation");
-    el.classList.remove("dashboard-heading-welcome");
   } else {
     const firstName = currentUser.full_name.trim().split(/\s+/)[0];
     el.textContent = `${t("dashboard.welcomeHeading")}, ${firstName}`;
-    el.classList.add("dashboard-heading-welcome");
   }
 }
 
@@ -746,6 +745,52 @@ function speakInEnglish(lines, btn) {
   speakLine(0);
 }
 
+// ── GPS + Open-Meteo rainfall integration ─────────────────────────────────
+// On login: requests GPS coordinates, calls /api/rainfall (Open-Meteo free
+// historical archive — no API key needed) for the past-12-month total, then
+// reveals a "📍 GPS" button next to the Rainfall input on the Crops tab so
+// the farmer can pre-fill that field with their location's annual average.
+// ──────────────────────────────────────────────────────────────────────────
+
+let annualRainfallMm = null; // set once GPS + Open-Meteo data arrives
+
+function applyAnnualRainfall() {
+  if (annualRainfallMm === null) return;
+  document.getElementById("in-rainfall").value = annualRainfallMm;
+  showView("crops"); // jump to Crops tab so the user sees the filled field
+}
+
+async function loadWeather() {
+  if (!navigator.geolocation) return;
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+
+      // Annual rainfall from Open-Meteo historical archive (free, no key)
+      try {
+        const rRes = await fetch(`/api/rainfall?lat=${lat}&lon=${lon}`);
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          if (!rData.error && rData.annual_mm != null) {
+            annualRainfallMm = rData.annual_mm;
+            const gpsBtn = document.getElementById("gps-fill-rainfall-btn");
+            if (gpsBtn) {
+              gpsBtn.style.display = "inline-flex";
+              gpsBtn.title = `Your location's annual rainfall: ${annualRainfallMm} mm — tap to pre-fill`;
+            }
+          }
+        }
+      } catch (e) { console.warn("Rainfall fetch failed:", e); }
+    },
+    (err) => { console.warn("Geolocation not available:", err.message); },
+    { timeout: 10000, maximumAge: 300000 }
+  );
+}
+
+// "📍 GPS" button next to the Rainfall input (crops tab)
+document.getElementById("gps-fill-rainfall-btn").addEventListener("click", applyAnnualRainfall);
+
 function collectInputs() {
   const values = {};
   for (const f of FIELDS) {
@@ -797,7 +842,7 @@ function renderResult(data) {
   document.getElementById("moisture-label").textContent = data.readings.humidity.label;
   setGauge("gauge-moisture", hum, "--green-light");
 
-  // Weather card (temperature + rainfall, KNUST-style widget)
+  // Weather card — update from soil analysis readings
   const temp = data.readings.temperature;
   const rain = data.readings.rainfall;
   document.getElementById("weather-temp-value").textContent = temp.value.toFixed(1) + "°C";
