@@ -8,11 +8,10 @@
 </head>
 <body>
 
-<!-- ─────────────────────── AUTH SCREENS (Welcome / Log In / Sign Up) ─────────────────────── -->
+<!-- ─────────────────────── COVER SCREEN (Get Started) ─────────────────────── -->
 <div class="auth-screen hidden" id="auth-screen">
   <div class="auth-slideshow" id="auth-slideshow"></div>
   <div class="auth-scrim"></div>
-
   <div class="auth-view active" data-auth-view="welcome">
     <div class="auth-welcome-content">
       <div class="auth-logo">&#127793;</div>
@@ -20,54 +19,7 @@
       <p class="auth-tagline" data-i18n="auth.tagline">Smarter crop choices, straight from your soil.</p>
     </div>
     <div class="auth-welcome-actions">
-      <button class="auth-btn auth-btn-solid" data-go="login" type="button" data-i18n="auth.logIn">Log In</button>
-      <button class="auth-btn auth-btn-outline" data-go="signup" type="button" data-i18n="auth.signUp">Sign Up</button>
-    </div>
-  </div>
-
-  <div class="auth-view" data-auth-view="login">
-    <div class="auth-form-panel">
-      <button class="auth-back" data-go="welcome" type="button" aria-label="Back">&#8592;</button>
-      <h2 class="auth-heading" data-i18n="auth.welcomeBack">Welcome Back</h2>
-      <p class="auth-subheading" data-i18n="auth.loginSubtitle">Log in to your account</p>
-      <div class="auth-error" id="login-error" style="display:none;"></div>
-      <form id="login-form">
-        <label class="auth-field">
-          <span data-i18n="auth.email">Email</span>
-          <input type="email" id="login-email" required autocomplete="email" placeholder="you@example.com">
-        </label>
-        <label class="auth-field">
-          <span data-i18n="auth.password">Password</span>
-          <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••">
-        </label>
-        <button class="auth-btn auth-btn-solid" type="submit" id="login-submit" data-i18n="auth.logIn">Log In</button>
-      </form>
-      <p class="auth-switch"><span data-i18n="auth.noAccount">Don't have an account?</span> <a href="#" data-go="signup" data-i18n="auth.signUp">Sign Up</a></p>
-    </div>
-  </div>
-
-  <div class="auth-view" data-auth-view="signup">
-    <div class="auth-form-panel">
-      <button class="auth-back" data-go="welcome" type="button" aria-label="Back">&#8592;</button>
-      <h2 class="auth-heading" data-i18n="auth.createAccount">Create Account</h2>
-      <p class="auth-subheading" data-i18n="auth.signupSubtitle">Sign up to get started</p>
-      <div class="auth-error" id="signup-error" style="display:none;"></div>
-      <form id="signup-form">
-        <label class="auth-field">
-          <span data-i18n="auth.fullName">Full Name</span>
-          <input type="text" id="signup-name" required autocomplete="name" placeholder="Kwame Mensah">
-        </label>
-        <label class="auth-field">
-          <span data-i18n="auth.email">Email</span>
-          <input type="email" id="signup-email" required autocomplete="email" placeholder="you@example.com">
-        </label>
-        <label class="auth-field">
-          <span data-i18n="auth.password">Password</span>
-          <input type="password" id="signup-password" required autocomplete="new-password" placeholder="At least 6 characters">
-        </label>
-        <button class="auth-btn auth-btn-solid" type="submit" id="signup-submit" data-i18n="auth.signUp">Sign Up</button>
-      </form>
-      <p class="auth-switch"><span data-i18n="auth.haveAccount">Already have an account?</span> <a href="#" data-go="login" data-i18n="auth.logIn">Log In</a></p>
+      <button class="auth-btn auth-btn-solid" id="get-started-btn" type="button" data-i18n="auth.getStarted">Get Started</button>
     </div>
   </div>
 </div>
@@ -81,7 +33,6 @@
     </div>
     <h1 class="page-title" id="page-title">Akuafo Ani</h1>
     <div class="topbar-actions">
-      <span class="icon-btn" title="Notifications">&#128276;</span>
       <span class="avatar" id="profile-avatar-btn" title="Profile"></span>
     </div>
   </header>
@@ -235,7 +186,6 @@
       <section class="card recommendations" id="recommendations">
         <div class="crops-hero" id="crops-hero">
           <div class="crops-hero-slideshow" id="crops-hero-slideshow"></div>
-          <div class="welcome-hero-scrim"></div>
           <div class="welcome-hero-text">
             <div class="crops-hero-caption" id="crops-hero-caption"></div>
           </div>
@@ -258,11 +208,11 @@
           <label><span data-i18n="crops.temperatureLabel">Temperature (&deg;C)</span><input type="number" id="in-temperature" placeholder="—"></label>
           <label><span data-i18n="crops.humidityLabel">Humidity (%)</span><input type="number" id="in-humidity" placeholder="—"></label>
           <label><span data-i18n="crops.phLabel">Soil pH</span><input type="number" step="0.1" id="in-ph" placeholder="—"></label>
-          <label>
+          <label class="rainfall-label-wrap">
             <span data-i18n="crops.rainfallLabel">Rainfall (mm)</span>
             <div class="input-with-btn">
               <input type="number" id="in-rainfall" placeholder="—">
-              <button class="gps-fill-btn" id="gps-fill-rainfall-btn" type="button" title="Auto-fill from your GPS location">&#128205; GPS</button>
+              <button class="gps-fill-btn" id="gps-fill-rainfall-btn" type="button" title="Auto-fill from your location">&#128205; GPS</button>
             </div>
           </label>
         </div>
@@ -271,7 +221,6 @@
 
       <button class="primary-btn" id="analyze-btn">&#129514; <span data-i18n="crops.analyzeBtn">Analyze Soil Sample</span></button>
       <button class="secondary-btn" id="clear-all-btn" type="button" data-i18n="crops.clearAll">Clear All</button>
-      <button class="ghost-btn" id="random-btn" data-i18n="crops.randomBtn">Load a random real sample</button>
 
     </div>
 
@@ -309,126 +258,183 @@
     <!-- ─────────────────────────── PROFILE VIEW ─────────────────────────── -->
     <div class="view" data-view="profile">
 
-      <section class="card profile-card">
-        <div class="profile-avatar-wrap">
-          <div class="profile-avatar" id="profile-avatar-display"></div>
-          <button class="avatar-edit-btn" id="avatar-edit-btn" type="button" title="Change photo">&#128247;</button>
-          <input type="file" id="avatar-file-input" accept="image/*" capture="user" class="hidden">
+      <!-- ── NOT LOGGED IN: login / sign up ── -->
+      <div id="profile-auth-section">
+
+        <div class="profile-auth-header">
+          <div class="profile-auth-logo">&#127793;</div>
+          <h2 class="profile-auth-title">Akuafo Ani</h2>
+          <p class="profile-auth-tagline" data-i18n="auth.tagline">Smarter crop choices, straight from your soil.</p>
         </div>
-        <div class="profile-name" id="profile-name-display">—</div>
-        <div class="profile-email" id="profile-email-display">—</div>
-        <button class="ghost-btn avatar-remove-btn hidden" id="avatar-remove-btn" type="button" data-i18n="profile.removePhoto">Remove photo</button>
-      </section>
 
-      <section class="section-header top-header">
-        <h3 data-i18n="profile.personalDetails">Personal Details</h3>
-      </section>
+        <div class="profile-auth-tabs">
+          <button class="profile-auth-tab active" data-profile-tab="login" data-i18n="auth.logIn">Log In</button>
+          <button class="profile-auth-tab" data-profile-tab="signup" data-i18n="auth.signUp">Sign Up</button>
+        </div>
 
-      <section class="card profile-form-card">
-        <div class="form-error hidden" id="details-error"></div>
-        <div class="form-success hidden" id="details-success" data-i18n="profile.saved">Saved.</div>
-        <form id="details-form">
-          <label class="profile-field">
-            <span data-i18n="profile.fullName">Full Name</span>
-            <input type="text" id="details-name" required>
-          </label>
-          <label class="profile-field">
-            <span data-i18n="profile.email">Email</span>
-            <input type="email" id="details-email" required>
-          </label>
-          <label class="profile-field">
-            <span data-i18n="profile.phone">Phone Number</span>
-            <input type="tel" id="details-phone" placeholder="+233 24 123 4567">
-          </label>
-          <label class="profile-field">
-            <span data-i18n="profile.avatarStyle">Avatar Style</span>
-            <select id="details-gender">
-              <option value="male" data-i18n="profile.male">Male</option>
-              <option value="female" data-i18n="profile.female">Female</option>
+        <!-- Login form -->
+        <section class="card profile-form-card" id="profile-login-card">
+          <div class="form-error hidden" id="login-error"></div>
+          <form id="login-form">
+            <label class="profile-field">
+              <span data-i18n="auth.email">Email</span>
+              <input type="email" id="login-email" required autocomplete="email" placeholder="you@example.com">
+            </label>
+            <label class="profile-field">
+              <span data-i18n="auth.password">Password</span>
+              <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••">
+            </label>
+            <button class="primary-btn" type="submit" id="login-submit" data-i18n="auth.logIn">Log In</button>
+          </form>
+        </section>
+
+        <!-- Sign Up form -->
+        <section class="card profile-form-card hidden" id="profile-signup-card">
+          <div class="form-error hidden" id="signup-error"></div>
+          <form id="signup-form">
+            <label class="profile-field">
+              <span data-i18n="auth.fullName">Full Name</span>
+              <input type="text" id="signup-name" required autocomplete="name" placeholder="Kwame Mensah">
+            </label>
+            <label class="profile-field">
+              <span data-i18n="auth.email">Email</span>
+              <input type="email" id="signup-email" required autocomplete="email" placeholder="you@example.com">
+            </label>
+            <label class="profile-field">
+              <span data-i18n="auth.password">Password</span>
+              <input type="password" id="signup-password" required autocomplete="new-password" placeholder="At least 6 characters">
+            </label>
+            <button class="primary-btn" type="submit" id="signup-submit" data-i18n="auth.signUp">Sign Up</button>
+          </form>
+        </section>
+
+      </div><!-- /#profile-auth-section -->
+
+      <!-- ── LOGGED IN: personal details, security, preferences ── -->
+      <div id="profile-user-section" class="hidden">
+
+        <section class="card profile-card">
+          <div class="profile-avatar-wrap">
+            <div class="profile-avatar" id="profile-avatar-display"></div>
+            <button class="avatar-edit-btn" id="avatar-edit-btn" type="button" title="Change photo">&#128247;</button>
+            <input type="file" id="avatar-file-input" accept="image/*" capture="user" class="hidden">
+          </div>
+          <div class="profile-name" id="profile-name-display">—</div>
+          <div class="profile-email" id="profile-email-display">—</div>
+          <button class="ghost-btn avatar-remove-btn hidden" id="avatar-remove-btn" type="button" data-i18n="profile.removePhoto">Remove photo</button>
+        </section>
+
+        <section class="section-header top-header">
+          <h3 data-i18n="profile.personalDetails">Personal Details</h3>
+        </section>
+
+        <section class="card profile-form-card">
+          <div class="form-error hidden" id="details-error"></div>
+          <div class="form-success hidden" id="details-success" data-i18n="profile.saved">Saved.</div>
+          <form id="details-form">
+            <label class="profile-field">
+              <span data-i18n="profile.fullName">Full Name</span>
+              <input type="text" id="details-name" required>
+            </label>
+            <label class="profile-field">
+              <span data-i18n="profile.email">Email</span>
+              <input type="email" id="details-email" required>
+            </label>
+            <label class="profile-field">
+              <span data-i18n="profile.phone">Phone Number</span>
+              <input type="tel" id="details-phone" placeholder="+233 24 123 4567">
+            </label>
+            <label class="profile-field">
+              <span data-i18n="profile.avatarStyle">Avatar Style</span>
+              <select id="details-gender">
+                <option value="male" data-i18n="profile.male">Male</option>
+                <option value="female" data-i18n="profile.female">Female</option>
+              </select>
+            </label>
+            <button class="primary-btn" type="submit" id="details-save-btn" data-i18n="profile.saveChanges">Save Changes</button>
+          </form>
+        </section>
+
+        <section class="section-header">
+          <h3 data-i18n="profile.loginSecurity">Login &amp; Security</h3>
+        </section>
+
+        <section class="card profile-form-card">
+          <div class="form-error hidden" id="password-error"></div>
+          <div class="form-success hidden" id="password-success" data-i18n="profile.passwordUpdated">Password updated.</div>
+          <form id="password-form">
+            <label class="profile-field">
+              <span data-i18n="profile.currentPassword">Current Password</span>
+              <input type="password" id="current-password" required autocomplete="current-password">
+            </label>
+            <label class="profile-field">
+              <span data-i18n="profile.newPassword">New Password</span>
+              <input type="password" id="new-password" required autocomplete="new-password" placeholder="At least 6 characters">
+            </label>
+            <label class="profile-field">
+              <span data-i18n="profile.confirmPassword">Confirm New Password</span>
+              <input type="password" id="confirm-password" required autocomplete="new-password">
+            </label>
+            <button class="primary-btn" type="submit" id="password-save-btn" data-i18n="profile.updatePassword">Update Password</button>
+          </form>
+          <div class="security-note">
+            <span>&#128274;</span>
+            <div>
+              <div class="security-note-title" data-i18n="profile.twoFactor">Two-Factor Authentication</div>
+              <div class="security-note-sub" data-i18n="profile.comingSoon">Coming soon</div>
+            </div>
+          </div>
+          <div class="security-note">
+            <span>&#128241;</span>
+            <div>
+              <div class="security-note-title" data-i18n="profile.activeSessions">Active Sessions</div>
+              <div class="security-note-sub" data-i18n="profile.comingSoon">Coming soon</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-header">
+          <h3 data-i18n="profile.preferences">Preferences</h3>
+        </section>
+
+        <section class="card profile-form-card">
+          <div class="pref-row">
+            <div>
+              <div class="pref-title" data-i18n="profile.darkMode">Dark Mode</div>
+              <div class="pref-sub" data-i18n="profile.darkModeSub">Switch between light and dark themes</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="theme-toggle">
+              <span class="switch-track"></span>
+            </label>
+          </div>
+          <div class="pref-row">
+            <div>
+              <div class="pref-title" data-i18n="profile.notifications">Notifications</div>
+              <div class="pref-sub" data-i18n="profile.notificationsSub">Get updates about your soil samples</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="notifications-toggle" checked>
+              <span class="switch-track"></span>
+            </label>
+          </div>
+          <div class="pref-row">
+            <div>
+              <div class="pref-title" data-i18n="profile.language">Language</div>
+              <div class="pref-sub" data-i18n="profile.languageSub">Choose your preferred language</div>
+            </div>
+            <select id="language-select" class="lang-select">
+              <option value="en">English</option>
+              <option value="tw">Twi</option>
             </select>
-          </label>
-          <button class="primary-btn" type="submit" id="details-save-btn" data-i18n="profile.saveChanges">Save Changes</button>
-        </form>
-      </section>
-
-      <section class="section-header">
-        <h3 data-i18n="profile.loginSecurity">Login &amp; Security</h3>
-      </section>
-
-      <section class="card profile-form-card">
-        <div class="form-error hidden" id="password-error"></div>
-        <div class="form-success hidden" id="password-success" data-i18n="profile.passwordUpdated">Password updated.</div>
-        <form id="password-form">
-          <label class="profile-field">
-            <span data-i18n="profile.currentPassword">Current Password</span>
-            <input type="password" id="current-password" required autocomplete="current-password">
-          </label>
-          <label class="profile-field">
-            <span data-i18n="profile.newPassword">New Password</span>
-            <input type="password" id="new-password" required autocomplete="new-password" placeholder="At least 6 characters">
-          </label>
-          <label class="profile-field">
-            <span data-i18n="profile.confirmPassword">Confirm New Password</span>
-            <input type="password" id="confirm-password" required autocomplete="new-password">
-          </label>
-          <button class="primary-btn" type="submit" id="password-save-btn" data-i18n="profile.updatePassword">Update Password</button>
-        </form>
-        <div class="security-note">
-          <span>&#128274;</span>
-          <div>
-            <div class="security-note-title" data-i18n="profile.twoFactor">Two-Factor Authentication</div>
-            <div class="security-note-sub" data-i18n="profile.comingSoon">Coming soon</div>
           </div>
-        </div>
-        <div class="security-note">
-          <span>&#128241;</span>
-          <div>
-            <div class="security-note-title" data-i18n="profile.activeSessions">Active Sessions</div>
-            <div class="security-note-sub" data-i18n="profile.comingSoon">Coming soon</div>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="section-header">
-        <h3 data-i18n="profile.preferences">Preferences</h3>
-      </section>
+        <button class="ghost-btn logout-btn" id="logout-btn" type="button" data-i18n="profile.logOut">Log Out</button>
 
-      <section class="card profile-form-card">
-        <div class="pref-row">
-          <div>
-            <div class="pref-title" data-i18n="profile.darkMode">Dark Mode</div>
-            <div class="pref-sub" data-i18n="profile.darkModeSub">Switch between light and dark themes</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="theme-toggle">
-            <span class="switch-track"></span>
-          </label>
-        </div>
-        <div class="pref-row">
-          <div>
-            <div class="pref-title" data-i18n="profile.notifications">Notifications</div>
-            <div class="pref-sub" data-i18n="profile.notificationsSub">Get updates about your soil samples</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="notifications-toggle" checked>
-            <span class="switch-track"></span>
-          </label>
-        </div>
-        <div class="pref-row">
-          <div>
-            <div class="pref-title" data-i18n="profile.language">Language</div>
-            <div class="pref-sub" data-i18n="profile.languageSub">Choose your preferred language</div>
-          </div>
-          <select id="language-select" class="lang-select">
-            <option value="en">English</option>
-            <option value="tw">Twi</option>
-          </select>
-        </div>
-      </section>
+      </div><!-- /#profile-user-section -->
 
-      <button class="ghost-btn logout-btn" id="logout-btn" type="button" data-i18n="profile.logOut">Log Out</button>
-
-    </div>
+    </div><!-- /profile view -->
 
   </main>
 

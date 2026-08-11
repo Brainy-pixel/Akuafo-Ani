@@ -836,3 +836,50 @@ h1, h2, h3, h4,
 }
 
 .logout-btn { margin-top: 18px; color: var(--red); text-decoration: none; font-weight: 700; }
+
+/* ── Profile view: not-logged-in auth section ─────────────────────────────
+   Replaces the old full-screen dark overlay login/signup panels.
+   Uses the same card + profile-form-card styling as the rest of the app. ── */
+.profile-auth-header {
+  text-align: center;
+  padding: 40px 24px 24px;
+}
+.profile-auth-logo { font-size: 52px; margin-bottom: 6px; }
+.profile-auth-title {
+  font-size: 26px; font-weight: 800; margin: 0 0 8px;
+  font-family: var(--font-heading);
+  color: var(--forest);
+}
+.profile-auth-tagline {
+  font-size: 14px; color: var(--muted); margin: 0 auto;
+  line-height: 1.55; max-width: 280px;
+}
+
+/* Segmented tab switcher (Log In / Sign Up) */
+.profile-auth-tabs {
+  display: flex;
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px;
+  margin: 0 0 16px;
+  gap: 4px;
+}
+.profile-auth-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 11px;
+  padding: 11px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  font-family: var(--font-body);
+}
+.profile-auth-tab.active {
+  background: var(--card);
+  color: var(--forest);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}

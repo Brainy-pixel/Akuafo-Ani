@@ -14,6 +14,7 @@ function cropImage(crop) {
 const TRANSLATIONS = {
   en: {
     "auth.tagline": "Smarter crop choices, straight from your soil.",
+    "auth.getStarted": "Get Started",
     "auth.logIn": "Log In",
     "auth.signUp": "Sign Up",
     "auth.welcomeBack": "Welcome Back",
@@ -116,6 +117,7 @@ const TRANSLATIONS = {
   },
   tw: {
     "auth.tagline": "Nnɔbae a wɔpaw yiye, fi wo asase mu tee.",
+    "auth.getStarted": "Fi Ase",
     "auth.logIn": "Kɔ Akawnt Mu",
     "auth.signUp": "Yɛ Akawnt Foforo",
     "auth.welcomeBack": "Akwaaba Bio",
@@ -319,23 +321,48 @@ function refreshCropsHeroCaption() {
   if (captionEl && cropsHeroInterval) captionEl.textContent = t(CROPS_HERO_SLIDES[cropsHeroIndex].captionKey);
 }
 
-function showAuthView(view) {
-  document.querySelectorAll(".auth-view").forEach((v) => v.classList.remove("active"));
-  document.querySelector(`.auth-view[data-auth-view="${view}"]`).classList.add("active");
-}
-
-document.querySelectorAll("[data-go]").forEach((el) => {
-  el.addEventListener("click", (e) => {
-    e.preventDefault();
-    showAuthView(el.dataset.go);
-  });
-});
-
+// ── Cover screen helpers ─────────────────────────────────────────────────
+// showAuthScreen: show the cover ("Get Started") splash; hides the app.
+// showAppShell: show the app without a user — used by "Get Started" so the
+//   profile tab can display the login/signup forms before authentication.
 function showAuthScreen() {
   document.getElementById("auth-screen").classList.remove("hidden");
   document.getElementById("app-root").classList.add("hidden");
-  showAuthView("welcome");
 }
+
+function showAppShell() {
+  document.getElementById("auth-screen").classList.add("hidden");
+  document.getElementById("app-root").classList.remove("hidden");
+  renderProfileSectionState();
+  showView("profile");
+}
+
+// Profile view: shows auth forms when not logged in, profile details when in.
+function renderProfileSectionState() {
+  const authSec = document.getElementById("profile-auth-section");
+  const userSec = document.getElementById("profile-user-section");
+  if (currentUser) {
+    authSec.classList.add("hidden");
+    userSec.classList.remove("hidden");
+  } else {
+    authSec.classList.remove("hidden");
+    userSec.classList.add("hidden");
+  }
+}
+
+// Profile auth tab switching (Log In ↔ Sign Up)
+document.querySelectorAll(".profile-auth-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".profile-auth-tab").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    const which = tab.dataset.profileTab;
+    document.getElementById("profile-login-card").classList.toggle("hidden", which !== "login");
+    document.getElementById("profile-signup-card").classList.toggle("hidden", which !== "signup");
+  });
+});
+
+// "Get Started" on the cover screen → open the app at the Profile tab
+document.getElementById("get-started-btn").addEventListener("click", showAppShell);
 
 let currentUser = null;
 
@@ -374,13 +401,14 @@ function showApp(user) {
   currentUser = user;
   document.getElementById("auth-screen").classList.add("hidden");
   document.getElementById("app-root").classList.remove("hidden");
+  renderProfileSectionState();   // show user section, hide auth forms
   applyTheme(user.theme);
   applyLanguage(user.language);
   updateProfileView(user);
   resetDashboardState();
   showView("dashboard");
   initCropsHero();
-  loadWeather(); // kick off GPS → OWM + Open-Meteo in the background
+  loadWeather(); // kick off GPS → Open-Meteo in the background
 }
 
 // Switches the Dashboard heading between "Welcome, {FirstName}" (pre-analysis)
@@ -448,9 +476,9 @@ function updateProfileView(user) {
 
 function setAuthError(id, message) {
   const el = document.getElementById(id);
-  if (!message) { el.style.display = "none"; el.textContent = ""; return; }
+  if (!message) { el.classList.add("hidden"); el.textContent = ""; return; }
   el.textContent = message;
-  el.style.display = "block";
+  el.classList.remove("hidden");
 }
 
 // Errors carry dynamic server text; successes reuse their static, already
@@ -521,6 +549,8 @@ document.getElementById("signup-form").addEventListener("submit", async (e) => {
 document.getElementById("logout-btn").addEventListener("click", async () => {
   await fetch("/api/logout", { method: "POST" });
   currentUser = null;
+  stopActiveSpeech();
+  resetDashboardState();
   showAuthScreen();
 });
 
@@ -1125,15 +1155,7 @@ async function analyze() {
   }
 }
 
-async function loadRandomSample() {
-  const res = await fetch("/api/sample");
-  const data = await res.json();
-  fillInputs(data);
-  analyze();
-}
-
 document.getElementById("analyze-btn").addEventListener("click", analyze);
-document.getElementById("random-btn").addEventListener("click", loadRandomSample);
 
 // ── Tab navigation ──────────────────────────────────────────────────────
 const PAGE_TITLE_KEYS = { dashboard: "app.title", crops: "nav.crops", ideas: "nav.ideas", fields: "nav.summary", profile: "nav.profile" };
@@ -1155,15 +1177,15 @@ document.querySelectorAll(".nav-item").forEach((item) => {
 
 document.getElementById("profile-avatar-btn").addEventListener("click", () => showView("profile"));
 
-// ── Boot: show the dashboard if already logged in, otherwise the auth screens ──
+// ── Boot: restore session if one exists, otherwise show the cover screen ──
 (async function boot() {
   initAuthSlideshow();
   try {
     const res = await fetch("/api/me");
     if (res.ok) {
-      showApp(await res.json());
+      showApp(await res.json()); // already logged in → straight to dashboard
     } else {
-      showAuthScreen();
+      showAuthScreen();          // no session → cover screen ("Get Started")
     }
   } catch (err) {
     console.error(err);
