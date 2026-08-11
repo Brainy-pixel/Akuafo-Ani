@@ -845,6 +845,8 @@ h1, h2, h3, h4,
   padding: 40px 24px 24px;
 }
 .profile-auth-logo { font-size: 52px; margin-bottom: 6px; }
+.profile-auth-avatar { margin-bottom: 10px; line-height: 0; }
+.profile-auth-avatar svg { border-radius: 50%; display: block; }
 .profile-auth-title {
   font-size: 26px; font-weight: 800; margin: 0 0 8px;
   font-family: var(--font-heading);

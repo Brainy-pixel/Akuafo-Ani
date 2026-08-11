@@ -1158,16 +1158,21 @@ async function analyze() {
 document.getElementById("analyze-btn").addEventListener("click", analyze);
 
 // ── Tab navigation ──────────────────────────────────────────────────────
-const PAGE_TITLE_KEYS = { dashboard: "app.title", crops: "nav.crops", ideas: "nav.ideas", fields: "nav.summary", profile: "nav.profile" };
+const PAGE_TITLE_KEYS = { dashboard: "", crops: "nav.crops", ideas: "nav.ideas", fields: "nav.summary", profile: "nav.profile" };
 function pageTitle(view) {
-  return t(PAGE_TITLE_KEYS[view] || "app.title");
+  const key = PAGE_TITLE_KEYS[view];
+  return key ? t(key) : ""; // dashboard maps to "" → title hidden
 }
 
 function showView(view) {
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.view === view));
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   document.querySelector(`.view[data-view="${view}"]`).classList.add("active");
-  document.getElementById("page-title").textContent = pageTitle(view);
+  const title = pageTitle(view);
+  const pageTitleEl = document.getElementById("page-title");
+  pageTitleEl.textContent = title;
+  // Dashboard has its own heading — hide the topbar title there to avoid duplication
+  pageTitleEl.style.visibility = title ? "" : "hidden";
   window.scrollTo({ top: 0, behavior: "instant" });
 }
 

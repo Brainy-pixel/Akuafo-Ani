@@ -125,7 +125,6 @@
 
       <section class="section-header">
         <h3 data-i18n="dashboard.nutrientBalance">Nutrient Balance</h3>
-        <span class="info-icon" title="N, P and K shown as a share of their combined kg/ha">&#9432;</span>
       </section>
 
       <section class="nutrient-main card">
@@ -143,35 +142,34 @@
         <div class="bar-track small"><div class="bar-fill n" id="bar-n" style="width:0%"></div></div>
       </section>
 
-      <section class="nutrient-pair">
-        <div class="card nutrient-small">
-          <div class="nutrient-head">
-            <span class="nutrient-icon p">P</span>
-            <div>
-              <div class="nutrient-title" data-i18n="dashboard.phosphorus">Phosphorus</div>
-              <div class="nutrient-desc" data-i18n="dashboard.phosphorusDesc">Supports strong root and flower development.</div>
-            </div>
+      <section class="nutrient-main card">
+        <div class="nutrient-head">
+          <span class="nutrient-icon p">P</span>
+          <div>
+            <div class="nutrient-title" data-i18n="dashboard.phosphorus">Phosphorus</div>
+            <div class="nutrient-desc" data-i18n="dashboard.phosphorusDesc">Supports strong root and flower development.</div>
           </div>
-          <div class="nutrient-value-row">
-            <span class="nutrient-value" id="pct-p">0%</span>
-            <span class="trend" id="trend-p">&#8599;</span>
-          </div>
-          <div class="bar-track small"><div class="bar-fill p" id="bar-p" style="width:0%"></div></div>
         </div>
-        <div class="card nutrient-small">
-          <div class="nutrient-head">
-            <span class="nutrient-icon k">K</span>
-            <div>
-              <div class="nutrient-title" data-i18n="dashboard.potassium">Potassium</div>
-              <div class="nutrient-desc" data-i18n="dashboard.potassiumDesc">Boosts disease resistance and overall plant strength.</div>
-            </div>
-          </div>
-          <div class="nutrient-value-row">
-            <span class="nutrient-value" id="pct-k">0%</span>
-            <span class="trend" id="trend-k">&#8600;</span>
-          </div>
-          <div class="bar-track small"><div class="bar-fill k" id="bar-k" style="width:0%"></div></div>
+        <div class="nutrient-value-row">
+          <span class="nutrient-value" id="pct-p">0%</span>
+          <span class="trend" id="trend-p">&#8599;</span>
         </div>
+        <div class="bar-track small"><div class="bar-fill p" id="bar-p" style="width:0%"></div></div>
+      </section>
+
+      <section class="nutrient-main card">
+        <div class="nutrient-head">
+          <span class="nutrient-icon k">K</span>
+          <div>
+            <div class="nutrient-title" data-i18n="dashboard.potassium">Potassium</div>
+            <div class="nutrient-desc" data-i18n="dashboard.potassiumDesc">Boosts disease resistance and overall plant strength.</div>
+          </div>
+        </div>
+        <div class="nutrient-value-row">
+          <span class="nutrient-value" id="pct-k">0%</span>
+          <span class="trend" id="trend-k">&#8600;</span>
+        </div>
+        <div class="bar-track small"><div class="bar-fill k" id="bar-k" style="width:0%"></div></div>
       </section>
 
     </div>
@@ -202,21 +200,20 @@
 
       <section class="card sample-form">
         <div class="form-grid">
-          <label><span data-i18n="crops.nitrogenLabel">Nitrogen N (kg/ha)</span><input type="number" id="in-N" placeholder="—"></label>
-          <label><span data-i18n="crops.phosphorusLabel">Phosphorus P (kg/ha)</span><input type="number" id="in-P" placeholder="—"></label>
-          <label><span data-i18n="crops.potassiumLabel">Potassium K (kg/ha)</span><input type="number" id="in-K" placeholder="—"></label>
-          <label><span data-i18n="crops.temperatureLabel">Temperature (&deg;C)</span><input type="number" id="in-temperature" placeholder="—"></label>
-          <label><span data-i18n="crops.humidityLabel">Humidity (%)</span><input type="number" id="in-humidity" placeholder="—"></label>
-          <label><span data-i18n="crops.phLabel">Soil pH</span><input type="number" step="0.1" id="in-ph" placeholder="—"></label>
+          <label><span data-i18n="crops.nitrogenLabel">Nitrogen N (kg/ha)</span><input type="number" id="in-N" placeholder="--"></label>
+          <label><span data-i18n="crops.phosphorusLabel">Phosphorus P (kg/ha)</span><input type="number" id="in-P" placeholder="--"></label>
+          <label><span data-i18n="crops.potassiumLabel">Potassium K (kg/ha)</span><input type="number" id="in-K" placeholder="--"></label>
+          <label><span data-i18n="crops.temperatureLabel">Temperature (&deg;C)</span><input type="number" id="in-temperature" placeholder="--"></label>
+          <label><span data-i18n="crops.humidityLabel">Humidity (%)</span><input type="number" id="in-humidity" placeholder="--"></label>
+          <label><span data-i18n="crops.phLabel">Soil pH</span><input type="number" step="0.1" id="in-ph" placeholder="--"></label>
           <label class="rainfall-label-wrap">
             <span data-i18n="crops.rainfallLabel">Rainfall (mm)</span>
             <div class="input-with-btn">
-              <input type="number" id="in-rainfall" placeholder="—">
+              <input type="number" id="in-rainfall" placeholder="--">
               <button class="gps-fill-btn" id="gps-fill-rainfall-btn" type="button" title="Auto-fill from your location">&#128205; GPS</button>
             </div>
           </label>
         </div>
-        <p class="form-hint" data-i18n="crops.hint">Leave any field blank if unknown &mdash; the model will estimate it from similar soil samples.</p>
       </section>
 
       <button class="primary-btn" id="analyze-btn">&#129514; <span data-i18n="crops.analyzeBtn">Analyze Soil Sample</span></button>
@@ -262,8 +259,14 @@
       <div id="profile-auth-section">
 
         <div class="profile-auth-header">
-          <div class="profile-auth-logo">&#127793;</div>
-          <h2 class="profile-auth-title">Akuafo Ani</h2>
+          <div class="profile-auth-avatar">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" width="80" height="80">
+              <circle cx="60" cy="60" r="60" fill="#e7ecf3"/>
+              <circle cx="60" cy="46" r="22" fill="#b0bec5"/>
+              <path d="M60 80c26 0 46 18 46 48H14c0-30 20-48 46-48z" fill="#b0bec5"/>
+            </svg>
+          </div>
+          <h2 class="profile-auth-title">Welcome Okuafo</h2>
           <p class="profile-auth-tagline" data-i18n="auth.tagline">Smarter crop choices, straight from your soil.</p>
         </div>
 
