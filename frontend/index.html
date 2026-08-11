@@ -167,7 +167,7 @@
         </div>
         <div class="nutrient-value-row">
           <span class="nutrient-value" id="pct-k">0%</span>
-          <span class="trend" id="trend-k">&#8600;</span>
+          <span class="trend" id="trend-k">&#8599;</span>
         </div>
         <div class="bar-track small"><div class="bar-fill k" id="bar-k" style="width:0%"></div></div>
       </section>
@@ -254,6 +254,11 @@
 
     <!-- ─────────────────────────── PROFILE VIEW ─────────────────────────── -->
     <div class="view" data-view="profile">
+
+      <!-- Back button — always visible, returns to the previous tab -->
+      <div class="profile-back-row">
+        <button class="back-btn" id="profile-back-btn" type="button">&#8592; <span data-i18n="common.back">Back</span></button>
+      </div>
 
       <!-- ── NOT LOGGED IN: login / sign up ── -->
       <div id="profile-auth-section">
@@ -396,46 +401,48 @@
           </div>
         </section>
 
-        <section class="section-header">
-          <h3 data-i18n="profile.preferences">Preferences</h3>
-        </section>
-
-        <section class="card profile-form-card">
-          <div class="pref-row">
-            <div>
-              <div class="pref-title" data-i18n="profile.darkMode">Dark Mode</div>
-              <div class="pref-sub" data-i18n="profile.darkModeSub">Switch between light and dark themes</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="theme-toggle">
-              <span class="switch-track"></span>
-            </label>
-          </div>
-          <div class="pref-row">
-            <div>
-              <div class="pref-title" data-i18n="profile.notifications">Notifications</div>
-              <div class="pref-sub" data-i18n="profile.notificationsSub">Get updates about your soil samples</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="notifications-toggle" checked>
-              <span class="switch-track"></span>
-            </label>
-          </div>
-          <div class="pref-row">
-            <div>
-              <div class="pref-title" data-i18n="profile.language">Language</div>
-              <div class="pref-sub" data-i18n="profile.languageSub">Choose your preferred language</div>
-            </div>
-            <select id="language-select" class="lang-select">
-              <option value="en">English</option>
-              <option value="tw">Twi</option>
-            </select>
-          </div>
-        </section>
-
         <button class="ghost-btn logout-btn" id="logout-btn" type="button" data-i18n="profile.logOut">Log Out</button>
 
       </div><!-- /#profile-user-section -->
+
+      <!-- Preferences — always visible regardless of sign-in state -->
+      <section class="section-header">
+        <h3 data-i18n="profile.preferences">Preferences</h3>
+      </section>
+
+      <section class="card profile-form-card">
+        <div class="pref-row">
+          <div>
+            <div class="pref-title" data-i18n="profile.darkMode">Dark Mode</div>
+            <div class="pref-sub" data-i18n="profile.darkModeSub">Switch between light and dark themes</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="theme-toggle">
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <!-- Notifications only meaningful when signed in -->
+        <div class="pref-row pref-row-notifications hidden">
+          <div>
+            <div class="pref-title" data-i18n="profile.notifications">Notifications</div>
+            <div class="pref-sub" data-i18n="profile.notificationsSub">Get updates about your soil samples</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="notifications-toggle" checked>
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div class="pref-row">
+          <div>
+            <div class="pref-title" data-i18n="profile.language">Language</div>
+            <div class="pref-sub" data-i18n="profile.languageSub">Choose your preferred language</div>
+          </div>
+          <select id="language-select" class="lang-select">
+            <option value="en">English</option>
+            <option value="tw">Twi</option>
+          </select>
+        </div>
+      </section>
 
     </div><!-- /profile view -->
 
@@ -469,6 +476,17 @@
     </div>
   </div>
 
+</div>
+<!-- ── Speech player bar — floats above bottom nav while TTS is active ── -->
+<div class="speech-player" id="speech-player" style="display:none;" role="status">
+  <div class="sp-line" id="sp-line-text"></div>
+  <div class="sp-controls">
+    <button class="sp-btn" id="sp-prev" type="button" title="Previous line">&#9198;</button>
+    <button class="sp-btn" id="sp-pause" type="button" title="Pause / Resume">&#9208;</button>
+    <button class="sp-btn" id="sp-next" type="button" title="Next line">&#9197;</button>
+    <button class="sp-btn sp-stop" id="sp-stop" type="button" title="Stop">&#9209;</button>
+  </div>
+  <div class="sp-progress" id="sp-progress">1 / 1</div>
 </div>
 <script src="script.js"></script>
 </body>

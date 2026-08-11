@@ -330,23 +330,40 @@ function showAuthScreen() {
   document.getElementById("app-root").classList.add("hidden");
 }
 
+// Neutral person SVG shown in topbar when no user is signed in
+const UNSIGNED_AVATAR_SVG = `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="60" cy="60" r="60" fill="#e7ecf3"/>
+  <circle cx="60" cy="46" r="22" fill="#b0bec5"/>
+  <path d="M60 80c26 0 46 18 46 48H14c0-30 20-48 46-48z" fill="#b0bec5"/>
+</svg>`;
+
 function showAppShell() {
   document.getElementById("auth-screen").classList.add("hidden");
   document.getElementById("app-root").classList.remove("hidden");
+  // Show unsigned avatar in topbar while no user is logged in
+  document.getElementById("profile-avatar-btn").innerHTML = UNSIGNED_AVATAR_SVG;
   renderProfileSectionState();
   showView("profile");
 }
 
 // Profile view: shows auth forms when not logged in, profile details when in.
+// Notifications row is hidden when not logged in (no account to save it to).
 function renderProfileSectionState() {
-  const authSec = document.getElementById("profile-auth-section");
-  const userSec = document.getElementById("profile-user-section");
+  const authSec  = document.getElementById("profile-auth-section");
+  const userSec  = document.getElementById("profile-user-section");
+  const notifRow = document.querySelector(".pref-row-notifications");
   if (currentUser) {
     authSec.classList.add("hidden");
     userSec.classList.remove("hidden");
+    if (notifRow) notifRow.classList.remove("hidden");
   } else {
     authSec.classList.remove("hidden");
     userSec.classList.add("hidden");
+    if (notifRow) notifRow.classList.add("hidden");
+    // Apply saved local preferences (dark mode, language) when not logged in
+    const lp = loadLocalPrefs();
+    if (lp.theme)    { applyTheme(lp.theme);       document.getElementById("theme-toggle").checked = lp.theme === "dark"; }
+    if (lp.language) { applyLanguage(lp.language);  document.getElementById("language-select").value = lp.language; }
   }
 }
 
@@ -664,6 +681,19 @@ document.getElementById("password-form").addEventListener("submit", async (e) =>
 });
 
 // ── Preferences: theme, notifications, language ──────────────────────────
+// When logged in, preferences sync to the server.
+// When not logged in, dark-mode and language are saved to localStorage so
+// they persist across the session without requiring an account.
+const LOCAL_PREFS_KEY = "akuafo_prefs";
+function loadLocalPrefs() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_PREFS_KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveLocalPref(key, value) {
+  const p = loadLocalPrefs(); p[key] = value;
+  localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(p));
+}
+
 async function savePreference(patch) {
   const res = await fetch("/api/preferences", {
     method: "PATCH",
@@ -682,22 +712,23 @@ function applyTheme(theme) {
 document.getElementById("theme-toggle").addEventListener("change", async (e) => {
   const theme = e.target.checked ? "dark" : "light";
   applyTheme(theme);
-  await savePreference({ theme });
+  if (currentUser) { await savePreference({ theme }); }
+  else             { saveLocalPref("theme", theme); }
 });
 
 document.getElementById("notifications-toggle").addEventListener("change", async (e) => {
-  await savePreference({ notifications_enabled: e.target.checked });
+  if (currentUser) await savePreference({ notifications_enabled: e.target.checked });
 });
 
 document.getElementById("language-select").addEventListener("change", async (e) => {
   applyLanguage(e.target.value);
-  await savePreference({ language: e.target.value });
+  if (currentUser) { await savePreference({ language: e.target.value }); }
+  else             { saveLocalPref("language", e.target.value); }
 });
 
 // ── Voice feature: reads English text aloud via the browser's built-in
-// speech synthesis (no server round-trip, no translation). Each item in the
-// lines array is spoken as its own sentence, with a short rest before the
-// next one begins. Clicking the button again while it's playing stops it. ──
+// speech synthesis. Features: pause/resume, prev/next-line seeking via a
+// floating player bar, stop. Rate 0.85 for clarity. ──────────────────────
 function cropSpeechText(rec) {
   const pct = Math.round(rec.confidence * 100);
   return [`${rec.crop}, ${pct} percent match.`, ...(rec.reasons || [])];
@@ -714,14 +745,77 @@ let speechToken = 0;
 let speechTimeoutId = null;
 let activeSpeechBtn = null;
 let activeSpeechReset = null;
+// Player state
+let speechLines = [];      // pre-processed lines array
+let speechCurrentLine = 0; // index of line currently being (or about to be) spoken
+let speechIsPaused = false;
 
+// ── Player bar UI helpers ────────────────────────────────────────────────
+function showSpeechPlayer() {
+  const bar = document.getElementById("speech-player");
+  if (bar) bar.style.display = "flex";
+  updateSpeechPlayerUI();
+}
+
+function hideSpeechPlayer() {
+  const bar = document.getElementById("speech-player");
+  if (bar) bar.style.display = "none";
+}
+
+function updateSpeechPlayerUI() {
+  const lineEl = document.getElementById("sp-line-text");
+  const progEl = document.getElementById("sp-progress");
+  const pauseBtn = document.getElementById("sp-pause");
+  if (lineEl) lineEl.textContent = speechLines[speechCurrentLine] || "";
+  if (progEl) progEl.textContent = `${speechCurrentLine + 1} / ${speechLines.length}`;
+  if (pauseBtn) pauseBtn.textContent = speechIsPaused ? "▶" : "⏸";
+}
+
+// ── Core speech functions ────────────────────────────────────────────────
 function stopActiveSpeech() {
-  speechToken++; // invalidate any in-flight callbacks/timers from the current playback
+  speechToken++;
   window.speechSynthesis.cancel();
   if (speechTimeoutId) { clearTimeout(speechTimeoutId); speechTimeoutId = null; }
   if (activeSpeechReset) activeSpeechReset();
   activeSpeechBtn = null;
   activeSpeechReset = null;
+  speechIsPaused = false;
+  hideSpeechPlayer();
+}
+
+function speakCurrentLine(myToken) {
+  if (myToken !== speechToken || speechCurrentLine >= speechLines.length) {
+    if (myToken === speechToken) stopActiveSpeech();
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(speechLines[speechCurrentLine]);
+  utterance.lang = "en-US";
+  utterance.rate = 0.85;
+
+  utterance.addEventListener("start", () => {
+    if (myToken !== speechToken) return;
+    if (activeSpeechBtn) {
+      const label = activeSpeechBtn.querySelector(".listen-label");
+      const icon  = activeSpeechBtn.querySelector(".listen-icon");
+      if (label) label.textContent = "Stop";
+      if (icon)  icon.textContent  = "⏹";
+    }
+    updateSpeechPlayerUI();
+  });
+  utterance.addEventListener("end", () => {
+    if (myToken !== speechToken) return;
+    speechCurrentLine++;
+    updateSpeechPlayerUI();
+    if (speechCurrentLine < speechLines.length) {
+      speechTimeoutId = setTimeout(() => speakCurrentLine(myToken), LINE_PAUSE_MS);
+    } else {
+      stopActiveSpeech();
+    }
+  });
+  utterance.addEventListener("error", () => {
+    if (myToken === speechToken) stopActiveSpeech();
+  });
+  window.speechSynthesis.speak(utterance);
 }
 
 function speakInEnglish(lines, btn) {
@@ -729,51 +823,66 @@ function speakInEnglish(lines, btn) {
 
   const wasThisButton = activeSpeechBtn === btn;
   stopActiveSpeech();
-  if (wasThisButton) return; // clicking a playing button again just stops it
+  if (wasThisButton) return; // clicking a playing button again stops it
 
   if (!lines) return;
   const linesArr = Array.isArray(lines) ? lines : [lines];
   if (!linesArr.length) return;
 
+  speechLines = linesArr.map(speechFriendly);
+  speechCurrentLine = 0;
+  speechIsPaused = false;
+
   const myToken = ++speechToken;
   const label = btn.querySelector(".listen-label");
-  const icon = btn.querySelector(".listen-icon");
-  const originalLabel = label.textContent;
-  const originalIcon = icon ? icon.textContent : "";
+  const icon  = btn.querySelector(".listen-icon");
+  const origLabel = label ? label.textContent : "";
+  const origIcon  = icon  ? icon.textContent  : "";
 
-  const reset = () => {
-    label.textContent = originalLabel;
-    if (icon) icon.textContent = originalIcon;
-  };
   activeSpeechBtn = btn;
-  activeSpeechReset = reset;
-
-  const speakLine = (i) => {
-    if (myToken !== speechToken || i >= linesArr.length) { stopActiveSpeech(); return; }
-    const utterance = new SpeechSynthesisUtterance(speechFriendly(linesArr[i]));
-    utterance.lang = "en-US";
-    utterance.rate = 0.85; // a bit slower, so units like "hectare" come through clearly
-
-    utterance.addEventListener("start", () => {
-      if (myToken !== speechToken) return;
-      label.textContent = "Stop";
-      if (icon) icon.textContent = "⏹";
-    });
-    utterance.addEventListener("end", () => {
-      if (myToken !== speechToken) return;
-      if (i + 1 < linesArr.length) {
-        speechTimeoutId = setTimeout(() => speakLine(i + 1), LINE_PAUSE_MS);
-      } else {
-        stopActiveSpeech();
-      }
-    });
-    utterance.addEventListener("error", () => { if (myToken === speechToken) stopActiveSpeech(); });
-
-    window.speechSynthesis.speak(utterance);
+  activeSpeechReset = () => {
+    if (label) label.textContent = origLabel;
+    if (icon)  icon.textContent  = origIcon;
   };
 
-  speakLine(0);
+  speakCurrentLine(myToken);
+  showSpeechPlayer();
 }
+
+// ── Player bar controls ──────────────────────────────────────────────────
+document.getElementById("sp-pause").addEventListener("click", () => {
+  if (!window.speechSynthesis) return;
+  if (speechIsPaused) {
+    window.speechSynthesis.resume();
+    speechIsPaused = false;
+  } else {
+    window.speechSynthesis.pause();
+    speechIsPaused = true;
+  }
+  updateSpeechPlayerUI();
+});
+
+document.getElementById("sp-stop").addEventListener("click", stopActiveSpeech);
+
+document.getElementById("sp-prev").addEventListener("click", () => {
+  const tok = speechToken;
+  window.speechSynthesis.cancel();
+  if (speechTimeoutId) { clearTimeout(speechTimeoutId); speechTimeoutId = null; }
+  speechIsPaused = false;
+  speechCurrentLine = Math.max(0, speechCurrentLine - 1);
+  updateSpeechPlayerUI();
+  speakCurrentLine(tok);
+});
+
+document.getElementById("sp-next").addEventListener("click", () => {
+  const tok = speechToken;
+  window.speechSynthesis.cancel();
+  if (speechTimeoutId) { clearTimeout(speechTimeoutId); speechTimeoutId = null; }
+  speechIsPaused = false;
+  speechCurrentLine = Math.min(speechLines.length - 1, speechCurrentLine + 1);
+  updateSpeechPlayerUI();
+  speakCurrentLine(tok);
+});
 
 // ── GPS + Open-Meteo rainfall integration ─────────────────────────────────
 // On login: requests GPS coordinates, calls /api/rainfall (Open-Meteo free
@@ -1164,7 +1273,16 @@ function pageTitle(view) {
   return key ? t(key) : ""; // dashboard maps to "" → title hidden
 }
 
+// Track the last non-profile view so the back button can return there.
+let previousView = "dashboard";
+
 function showView(view) {
+  // Record where we came from before navigating to profile
+  const activeView = document.querySelector(".view.active");
+  if (view === "profile" && activeView && activeView.dataset.view !== "profile") {
+    previousView = activeView.dataset.view;
+  }
+
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.view === view));
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   document.querySelector(`.view[data-view="${view}"]`).classList.add("active");
@@ -1181,6 +1299,11 @@ document.querySelectorAll(".nav-item").forEach((item) => {
 });
 
 document.getElementById("profile-avatar-btn").addEventListener("click", () => showView("profile"));
+
+// Back button on the profile tab → return to previous view
+document.getElementById("profile-back-btn").addEventListener("click", () => {
+  showView(previousView || "dashboard");
+});
 
 // ── Boot: restore session if one exists, otherwise show the cover screen ──
 (async function boot() {
