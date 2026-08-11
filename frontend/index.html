@@ -43,7 +43,7 @@
     <div class="view active" data-view="dashboard">
 
       <section class="section-header top-header" id="top-recommendation-header">
-        <h3 id="dashboard-heading" data-i18n="dashboard.topRecommendation">Top Recommendation</h3>
+        <h3 id="dashboard-heading">Top Recommendation</h3>
       </section>
 
       <section class="card top-pick" id="top-pick">
@@ -72,6 +72,11 @@
           <span class="listen-icon">&#128266;</span>
           <span class="listen-label" data-i18n="common.listen">Listen</span>
         </button>
+        <div class="listen-seek hidden" id="why-listen-seek">
+          <button class="sp-pause-btn" type="button" title="Pause / Resume">&#9208;</button>
+          <input type="range" class="sp-seek" min="0" max="1" value="0" step="1">
+          <button class="sp-stop-btn" type="button" title="Stop">&#9209;</button>
+        </div>
       </section>
 
       <section class="card weather-card" id="weather-card">
@@ -236,6 +241,11 @@
         <span class="listen-icon">&#128266;</span>
         <span class="listen-label" data-i18n="ideas.listenToTips">Listen to tips</span>
       </button>
+      <div class="listen-seek hidden" id="ideas-listen-seek">
+        <button class="sp-pause-btn" type="button" title="Pause / Resume">&#9208;</button>
+        <input type="range" class="sp-seek" min="0" max="1" value="0" step="1">
+        <button class="sp-stop-btn" type="button" title="Stop">&#9209;</button>
+      </div>
 
     </div>
 
@@ -472,21 +482,15 @@
           <span class="listen-icon">&#128266;</span>
           <span class="listen-label" data-i18n="common.listen">Listen</span>
         </button>
+        <div class="listen-seek hidden" id="crop-detail-listen-seek">
+          <button class="sp-pause-btn" type="button" title="Pause / Resume">&#9208;</button>
+          <input type="range" class="sp-seek" min="0" max="1" value="0" step="1">
+          <button class="sp-stop-btn" type="button" title="Stop">&#9209;</button>
+        </div>
       </div>
     </div>
   </div>
 
-</div>
-<!-- ── Speech player bar — floats above bottom nav while TTS is active ── -->
-<div class="speech-player" id="speech-player" style="display:none;" role="status">
-  <div class="sp-line" id="sp-line-text"></div>
-  <div class="sp-controls">
-    <button class="sp-btn" id="sp-prev" type="button" title="Previous line">&#9198;</button>
-    <button class="sp-btn" id="sp-pause" type="button" title="Pause / Resume">&#9208;</button>
-    <button class="sp-btn" id="sp-next" type="button" title="Next line">&#9197;</button>
-    <button class="sp-btn sp-stop" id="sp-stop" type="button" title="Stop">&#9209;</button>
-  </div>
-  <div class="sp-progress" id="sp-progress">1 / 1</div>
 </div>
 <script src="script.js"></script>
 </body>

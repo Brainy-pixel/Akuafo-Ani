@@ -343,6 +343,7 @@ function showAppShell() {
   // Show unsigned avatar in topbar while no user is logged in
   document.getElementById("profile-avatar-btn").innerHTML = UNSIGNED_AVATAR_SVG;
   renderProfileSectionState();
+  updateWelcomeHeading(); // show "Welcome Okuafo" on dashboard before sign-in
   showView("profile");
 }
 
@@ -428,18 +429,18 @@ function showApp(user) {
   loadWeather(); // kick off GPS → Open-Meteo in the background
 }
 
-// Switches the Dashboard heading between "Welcome, {FirstName}" (pre-analysis)
-// and "Top Recommendation" (post-analysis).  Both states use Aptos Display —
-// no font class toggling needed, the heading rule covers both.
+// Switches the Dashboard heading between "Welcome Okuafo / Welcome, {Name}"
+// (pre-analysis) and "Top Recommendation" (post-analysis).
 function updateWelcomeHeading() {
-  if (!currentUser) return;
   const el = document.getElementById("dashboard-heading");
   if (!el) return;
   if (lastData) {
     el.textContent = t("dashboard.topRecommendation");
-  } else {
+  } else if (currentUser) {
     const firstName = currentUser.full_name.trim().split(/\s+/)[0];
     el.textContent = `${t("dashboard.welcomeHeading")}, ${firstName}`;
+  } else {
+    el.textContent = "Welcome Okuafo";
   }
 }
 
@@ -750,25 +751,31 @@ let speechLines = [];      // pre-processed lines array
 let speechCurrentLine = 0; // index of line currently being (or about to be) spoken
 let speechIsPaused = false;
 
-// ── Player bar UI helpers ────────────────────────────────────────────────
-function showSpeechPlayer() {
-  const bar = document.getElementById("speech-player");
-  if (bar) bar.style.display = "flex";
-  updateSpeechPlayerUI();
+// ── Inline seek strip helpers ────────────────────────────────────────────
+let activeSeekWrap = null;
+
+function showSeekFor(btn) {
+  hideActiveSeek();
+  // The seek strip is the immediate next sibling of the listen button
+  const wrap = btn ? btn.nextElementSibling : null;
+  if (wrap && wrap.classList.contains("listen-seek")) {
+    const slider = wrap.querySelector(".sp-seek");
+    if (slider) { slider.max = Math.max(0, speechLines.length - 1); slider.value = 0; }
+    const pauseBtn = wrap.querySelector(".sp-pause-btn");
+    if (pauseBtn) pauseBtn.textContent = "⏸";
+    wrap.classList.remove("hidden");
+    activeSeekWrap = wrap;
+  }
 }
 
-function hideSpeechPlayer() {
-  const bar = document.getElementById("speech-player");
-  if (bar) bar.style.display = "none";
+function hideActiveSeek() {
+  if (activeSeekWrap) { activeSeekWrap.classList.add("hidden"); activeSeekWrap = null; }
 }
 
-function updateSpeechPlayerUI() {
-  const lineEl = document.getElementById("sp-line-text");
-  const progEl = document.getElementById("sp-progress");
-  const pauseBtn = document.getElementById("sp-pause");
-  if (lineEl) lineEl.textContent = speechLines[speechCurrentLine] || "";
-  if (progEl) progEl.textContent = `${speechCurrentLine + 1} / ${speechLines.length}`;
-  if (pauseBtn) pauseBtn.textContent = speechIsPaused ? "▶" : "⏸";
+function updateSeekSlider() {
+  if (!activeSeekWrap) return;
+  const slider = activeSeekWrap.querySelector(".sp-seek");
+  if (slider) slider.value = speechCurrentLine;
 }
 
 // ── Core speech functions ────────────────────────────────────────────────
@@ -780,7 +787,7 @@ function stopActiveSpeech() {
   activeSpeechBtn = null;
   activeSpeechReset = null;
   speechIsPaused = false;
-  hideSpeechPlayer();
+  hideActiveSeek();
 }
 
 function speakCurrentLine(myToken) {
@@ -800,12 +807,11 @@ function speakCurrentLine(myToken) {
       if (label) label.textContent = "Stop";
       if (icon)  icon.textContent  = "⏹";
     }
-    updateSpeechPlayerUI();
   });
   utterance.addEventListener("end", () => {
     if (myToken !== speechToken) return;
     speechCurrentLine++;
-    updateSpeechPlayerUI();
+    updateSeekSlider();
     if (speechCurrentLine < speechLines.length) {
       speechTimeoutId = setTimeout(() => speakCurrentLine(myToken), LINE_PAUSE_MS);
     } else {
@@ -846,41 +852,43 @@ function speakInEnglish(lines, btn) {
   };
 
   speakCurrentLine(myToken);
-  showSpeechPlayer();
+  showSeekFor(btn);
 }
 
-// ── Player bar controls ──────────────────────────────────────────────────
-document.getElementById("sp-pause").addEventListener("click", () => {
-  if (!window.speechSynthesis) return;
-  if (speechIsPaused) {
-    window.speechSynthesis.resume();
-    speechIsPaused = false;
-  } else {
-    window.speechSynthesis.pause();
-    speechIsPaused = true;
+// ── Inline seek strip controls (delegated — one handler covers all buttons) ─
+document.addEventListener("click", (e) => {
+  // Pause / Resume
+  const pauseBtn = e.target.closest(".sp-pause-btn");
+  if (pauseBtn && window.speechSynthesis) {
+    if (speechIsPaused) {
+      window.speechSynthesis.resume();
+      speechIsPaused = false;
+      pauseBtn.textContent = "⏸";
+    } else {
+      window.speechSynthesis.pause();
+      speechIsPaused = true;
+      pauseBtn.textContent = "▶";
+    }
+    return;
   }
-  updateSpeechPlayerUI();
+  // Stop
+  if (e.target.closest(".sp-stop-btn")) {
+    stopActiveSpeech();
+  }
 });
 
-document.getElementById("sp-stop").addEventListener("click", stopActiveSpeech);
-
-document.getElementById("sp-prev").addEventListener("click", () => {
+// Seek — dragging the range slider jumps to that line
+document.addEventListener("input", (e) => {
+  if (!e.target.classList.contains("sp-seek")) return;
   const tok = speechToken;
   window.speechSynthesis.cancel();
   if (speechTimeoutId) { clearTimeout(speechTimeoutId); speechTimeoutId = null; }
   speechIsPaused = false;
-  speechCurrentLine = Math.max(0, speechCurrentLine - 1);
-  updateSpeechPlayerUI();
-  speakCurrentLine(tok);
-});
-
-document.getElementById("sp-next").addEventListener("click", () => {
-  const tok = speechToken;
-  window.speechSynthesis.cancel();
-  if (speechTimeoutId) { clearTimeout(speechTimeoutId); speechTimeoutId = null; }
-  speechIsPaused = false;
-  speechCurrentLine = Math.min(speechLines.length - 1, speechCurrentLine + 1);
-  updateSpeechPlayerUI();
+  speechCurrentLine = parseInt(e.target.value, 10);
+  if (activeSeekWrap) {
+    const pb = activeSeekWrap.querySelector(".sp-pause-btn");
+    if (pb) pb.textContent = "⏸";
+  }
   speakCurrentLine(tok);
 });
 
