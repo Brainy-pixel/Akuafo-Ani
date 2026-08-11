@@ -344,6 +344,7 @@ function showAppShell() {
   document.getElementById("profile-avatar-btn").innerHTML = UNSIGNED_AVATAR_SVG;
   renderProfileSectionState();
   updateWelcomeHeading(); // show "Welcome Okuafo" on dashboard before sign-in
+  initCropsHero();        // start the crops carousel for unsigned users too
   showView("profile");
 }
 
@@ -877,8 +878,8 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// Seek — dragging the range slider jumps to that line
-document.addEventListener("input", (e) => {
+// Seek — slider jumps to that line only when user releases (VLC-style, no mid-drag interruption)
+document.addEventListener("change", (e) => {
   if (!e.target.classList.contains("sp-seek")) return;
   const tok = speechToken;
   window.speechSynthesis.cancel();
@@ -1275,7 +1276,7 @@ async function analyze() {
 document.getElementById("analyze-btn").addEventListener("click", analyze);
 
 // ── Tab navigation ──────────────────────────────────────────────────────
-const PAGE_TITLE_KEYS = { dashboard: "", crops: "nav.crops", ideas: "nav.ideas", fields: "nav.summary", profile: "nav.profile" };
+const PAGE_TITLE_KEYS = { dashboard: "", crops: "", ideas: "", fields: "", profile: "nav.profile" };
 function pageTitle(view) {
   const key = PAGE_TITLE_KEYS[view];
   return key ? t(key) : ""; // dashboard maps to "" → title hidden
