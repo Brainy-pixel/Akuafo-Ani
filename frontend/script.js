@@ -41,7 +41,7 @@ const TRANSLATIONS = {
     "dashboard.welcomeHeading": "Welcome",
     "dashboard.welcomeTagline": "A Happy, Informed and Cost-effective Farming with Akuafo Ani",
     "dashboard.whyThisCrop": "Why this crop?",
-    "dashboard.soilWeatherToday": "Soil Weather Today",
+    "dashboard.soilWeatherToday": "Today's Weather",
     "dashboard.rainfall": "Rainfall",
     "dashboard.humidity": "Humidity",
     "dashboard.condition": "Condition",
@@ -69,6 +69,7 @@ const TRANSLATIONS = {
     "crops.analyzeBtn": "Analyze Soil Sample",
     "crops.analyzing": "Analyzing...",
     "crops.clearAll": "Clear All",
+    "crops.resetAll": "Reset",
     "crops.randomBtn": "Load a random real sample",
 
     "cropsHero.plant": "Plant Best Crop",
@@ -144,7 +145,7 @@ const TRANSLATIONS = {
     "dashboard.welcomeHeading": "Akwaaba",
     "dashboard.welcomeTagline": "Kuayɛ a Ɛyɛ Anigye, Ɛma Nimdeɛ, Na Ɛnhyɛ Sika Bebree Wɔ Akuafo Ani",
     "dashboard.whyThisCrop": "Adɛn nti na ɛyɛ saa aduane yi?",
-    "dashboard.soilWeatherToday": "Asase Wim Tebea Ɛnnɛ",
+    "dashboard.soilWeatherToday": "Wim Tebea Ɛnnɛ",
     "dashboard.rainfall": "Osu",
     "dashboard.humidity": "Fɔntɔm",
     "dashboard.condition": "Tebea",
@@ -172,6 +173,7 @@ const TRANSLATIONS = {
     "crops.analyzeBtn": "Hwehwɛ Asase Nhwɛso Mu",
     "crops.analyzing": "Ɛrehwehwɛ Mu...",
     "crops.clearAll": "Yi Nyinaa",
+    "crops.resetAll": "San Fii Ase",
     "crops.randomBtn": "Fa nhwɛso ankasa bi kwa",
 
     "cropsHero.plant": "Dua Aduane Pa",
@@ -345,7 +347,7 @@ function showAppShell() {
   renderProfileSectionState();
   updateWelcomeHeading(); // show "Welcome Okuafo" on dashboard before sign-in
   initCropsHero();        // start the crops carousel for unsigned users too
-  showView("profile");
+  showView("dashboard");  // land on dashboard, not profile
 }
 
 // Profile view: shows auth forms when not logged in, profile details when in.
@@ -407,6 +409,7 @@ function resetDashboardState() {
   document.getElementById("top-pick-placeholder").style.display = "block";
   document.getElementById("why-card").style.display = "none";
   document.getElementById("fuzzy-note").style.display = "none";
+  document.getElementById("recommended-crops-header").style.display = "none";
   document.getElementById("ideas-listen-btn").style.display = "none";
   document.getElementById("ideas-box").innerHTML =
     `<div class="placeholder-text" data-i18n="ideas.placeholder">${t("ideas.placeholder")}</div>`;
@@ -967,6 +970,12 @@ document.getElementById("clear-all-btn").addEventListener("click", () => {
   initCropsHero();
 });
 
+document.getElementById("reset-btn").addEventListener("click", () => {
+  resetDashboardState();
+  initCropsHero();
+  showView("dashboard"); // return to dashboard tab, matching startup state
+});
+
 function setGauge(gaugeId, pct, colorVar) {
   const gauge = document.getElementById(gaugeId);
   const color = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
@@ -1074,6 +1083,7 @@ function renderResult(data) {
     box.appendChild(row);
   });
 
+  document.getElementById("recommended-crops-header").style.display = "";
   document.getElementById("fuzzy-note").style.display = data.used_fuzzy ? "block" : "none";
 
   renderTopPick(data);

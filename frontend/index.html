@@ -85,7 +85,7 @@
             <span class="weather-pin">&#128205;</span>
             <div>
               <div class="weather-place">KNUST</div>
-              <div class="weather-sub" data-i18n="dashboard.soilWeatherToday">Soil Weather Today</div>
+              <div class="weather-sub" data-i18n="dashboard.soilWeatherToday">Today's Weather</div>
             </div>
           </div>
           <div class="weather-temp-block">
@@ -182,7 +182,7 @@
     <!-- ─────────────────────────── CROPS VIEW ─────────────────────────── -->
     <div class="view" data-view="crops">
 
-      <section class="section-header top-header">
+      <section class="section-header top-header" id="recommended-crops-header" style="display:none;">
         <h3 data-i18n="crops.recommendedCrops">Recommended Crops</h3>
       </section>
 
@@ -223,6 +223,7 @@
 
       <button class="primary-btn" id="analyze-btn">&#129514; <span data-i18n="crops.analyzeBtn">Analyze Soil Sample</span></button>
       <button class="secondary-btn" id="clear-all-btn" type="button" data-i18n="crops.clearAll">Clear All</button>
+      <button class="secondary-btn" id="reset-btn" type="button" data-i18n="crops.resetAll">Reset</button>
 
     </div>
 
