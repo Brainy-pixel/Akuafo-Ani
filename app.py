@@ -653,6 +653,9 @@ ABENA_ALLOWED_VOICES = {
     "kwabena_eng", "akua_eng",
     "kobby_gpe", "mawuli_ewe",
 }
+# Optional: set ABENA_API_KEY in the Render dashboard (or .env locally) to use
+# your own Abena account key and bypass the 30-request anonymous free tier.
+ABENA_API_KEY = os.environ.get("ABENA_API_KEY", "")
 
 @app.route("/api/tts", methods=["POST"])
 def tts_proxy():
@@ -670,10 +673,14 @@ def tts_proxy():
         voice = "kwabena_eng"
 
     payload = json.dumps({"text": text, "voice": voice, "speed": speed}).encode()
+    headers = {"Content-Type": "application/json", "User-Agent": "AkuafoAni/1.0"}
+    if ABENA_API_KEY:
+        headers["Authorization"] = f"Bearer {ABENA_API_KEY}"
+
     req = urllib.request.Request(
         ABENA_TTS_URL,
         data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "AkuafoAni/1.0"},
+        headers=headers,
         method="POST",
     )
     try:
