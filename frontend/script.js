@@ -65,7 +65,7 @@ const TRANSLATIONS = {
     "crops.humidityLabel": "Humidity (%)",
     "crops.phLabel": "Soil pH",
     "crops.rainfallLabel": "Rainfall (mm)",
-    "crops.hint": "Leave any field blank if unknown — the model will estimate it from similar soil samples.",
+    "crops.hint": "Leave any field blank if unknown; the model will estimate it from similar soil samples.",
     "crops.analyzeBtn": "Analyze Soil Sample",
     "crops.analyzing": "Analyzing...",
     "crops.clearAll": "Clear All",
@@ -169,7 +169,7 @@ const TRANSLATIONS = {
     "crops.humidityLabel": "Fɔntɔm (%)",
     "crops.phLabel": "Asase pH",
     "crops.rainfallLabel": "Osu (mm)",
-    "crops.hint": "Gyae kwan biara mu kwaadu sɛ wonnim — model no bɛkyerɛ fi asase nhwɛso a ɛte saa ara mu.",
+    "crops.hint": "Gyae kwan biara mu kwaadu sɛ wonnim; model no bɛkyerɛ fi asase nhwɛso a ɛte saa ara mu.",
     "crops.analyzeBtn": "Hwehwɛ Asase Nhwɛso Mu",
     "crops.analyzing": "Ɛrehwehwɛ Mu...",
     "crops.clearAll": "Yi Nyinaa",
@@ -738,12 +738,12 @@ document.getElementById("language-select").addEventListener("change", async (e) 
 // the old per-parameter bullet list.  rank: 0 = top, 1 = second, 2 = third.
 function buildWhyNarrative(crop, rank) {
   if (rank === 0) {
-    return `${crop} is highly recommended because the soil macronutrient values obtained from your soil sample — nitrogen, potassium, and phosphorus — fall within the range of values required for ${crop} cultivation and great crop yield. Environmental conditions like rainfall, humidity, and temperature are also favorable, and the soil pH is within a reasonable range to support growing ${crop} as the top recommended crop.`;
+    return `${crop} is highly recommended because the soil macronutrient values obtained from your soil sample (nitrogen, potassium and phosphorus) fall within the range of values required for ${crop} cultivation and great crop yield. Environmental conditions like rainfall, humidity and temperature are also favorable, and the soil pH is within a reasonable range to support growing ${crop} as the top recommended crop.`;
   }
   if (rank === 1) {
-    return `${crop} is a strong second recommendation for your soil. Most parameter values — including nitrogen, potassium, and phosphorus — match fairly well for ${crop} cultivation, though some are a bit further from the optimal range compared to the top recommended crop. They are, however, closer to what is required than the third recommendation, making ${crop} a good alternative choice.`;
+    return `${crop} is a strong second recommendation for your soil. Most parameter values (including nitrogen, potassium and phosphorus) match fairly well for ${crop} cultivation, though some are a bit further from the optimal range compared to the top recommended crop. They are, however, closer to what is required than the third recommendation, making ${crop} a good alternative choice.`;
   }
-  return `${crop} is the last of the listed recommendations for your soil sample. The values for most parameters — including nitrogen, potassium, phosphorus, and environmental conditions — are further off from the optimal range for ${crop} compared to the top two recommendations. However, they are still closer to what ${crop} requires than the rest of the unranked crops, making it a viable option if the higher-ranked crops are not available.`;
+  return `${crop} is the last of the listed recommendations for your soil sample. The values for most parameters (including nitrogen, potassium, phosphorus and environmental conditions) are further off from the optimal range for ${crop} compared to the top two recommendations. However, they are still closer to what ${crop} requires than the rest of the unranked crops, making it a viable option if the higher ranked crops are not available.`;
 }
 
 function cropSpeechText(rec, rank = 0) {
@@ -1084,7 +1084,7 @@ async function loadWeather() {
             const gpsBtn = document.getElementById("gps-fill-rainfall-btn");
             if (gpsBtn) {
               gpsBtn.style.display = "inline-flex";
-              gpsBtn.title = `Your location's annual rainfall: ${annualRainfallMm} mm — tap to pre-fill`;
+              gpsBtn.title = `Your location's annual rainfall: ${annualRainfallMm} mm. Tap to pre-fill.`;
             }
           }
         }
@@ -1343,13 +1343,13 @@ function renderIdeas(data) {
   }
 
   if (r.P.percent < 30) {
-    tips.push(["🟣", "Phosphorus is low", "Low phosphorus can limit root development — a phosphate fertilizer may help."]);
+    tips.push(["🟣", "Phosphorus is low", "Low phosphorus can limit root development. A phosphate fertilizer may help."]);
   } else {
     tips.push(["🟣", "Phosphorus looks good", "Supports strong root and flower development."]);
   }
 
   if (r.K.percent < 30) {
-    tips.push(["🟠", "Potassium is low", "May affect disease resistance and fruit quality — consider a potash supplement."]);
+    tips.push(["🟠", "Potassium is low", "May affect disease resistance and fruit quality. Consider a potash supplement."]);
   } else {
     tips.push(["🟠", "Potassium looks good", "Supports disease resistance and overall plant strength."]);
   }
@@ -1359,7 +1359,7 @@ function renderIdeas(data) {
   } else if (r.ph.label === "Alkaline") {
     tips.push(["⚗️", "Soil is alkaline", "Adding organic matter or sulfur can help lower pH over time."]);
   } else {
-    tips.push(["⚗️", "pH is optimal", "Most crops thrive in this range — no adjustment needed."]);
+    tips.push(["⚗️", "pH is optimal", "Most crops thrive in this range. No adjustment needed."]);
   }
 
   if (r.humidity.label === "Low") {
