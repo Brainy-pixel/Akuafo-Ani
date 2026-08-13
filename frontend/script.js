@@ -784,21 +784,30 @@ function updateSeekSlider() {
 
 // ── Abena TTS integration ────────────────────────────────────────────────
 // Voice map: Twi UI → Twi voice (female, only option); English → Ghanaian male accent.
-// Note: Abena currently has no Twi male voice; abena_twi_high is the best Twi option.
+// Note: Abena currently has no Twi male voice; abena_twi_high is unavailable (503).
 const ABENA_VOICE = { tw: "abena_twi_lite", en: "kwabena_eng" };
 const abenaTTSCache = new Map(); // "voice:text" → blob URL (session-scoped)
 let   activeAudio   = null;      // HTMLAudioElement currently playing
+let   speechVoice   = "kwabena_eng"; // voice chosen for the current speech session
 
-function abenaVoice() { return ABENA_VOICE[currentLang] || "kwabena_eng"; }
+// Returns the voice for the active session (set by speakInEnglish via picker)
+function abenaVoice() { return speechVoice; }
 
-async function fetchAbenaAudio(text) {
-  const key = `${abenaVoice()}:${text}`;
+// Fetch & cache a WAV blob URL from Abena. Retries once on 503.
+async function fetchAbenaAudio(text, _attempt) {
+  if (_attempt === undefined) _attempt = 0;
+  const key = `${speechVoice}:${text}`;
   if (abenaTTSCache.has(key)) return abenaTTSCache.get(key);
   const res = await fetch("/api/tts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text.slice(0, 500), voice: abenaVoice(), speed: 1.0 }),
+    body: JSON.stringify({ text: text.slice(0, 500), voice: speechVoice, speed: 1.0 }),
   });
+  // Retry once on 503 (Abena voice temporarily unavailable)
+  if (res.status === 503 && _attempt === 0) {
+    await new Promise(r => setTimeout(r, 1200));
+    return fetchAbenaAudio(text, 1);
+  }
   if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
   const data = await res.json();
   if (data.status !== "success") throw new Error(data.error || "TTS error");
@@ -901,7 +910,9 @@ function speakBrowserLine(myToken) {
   window.speechSynthesis.speak(utterance);
 }
 
-function speakInEnglish(lines, btn) {
+// voice: explicit Abena voice ID from the picker (kwabena_eng | abena_twi_lite)
+// If omitted, falls back to the UI-language voice.
+function speakInEnglish(lines, btn, voice) {
   const wasThisButton = activeSpeechBtn === btn;
   stopActiveSpeech();
   if (wasThisButton) return; // toggle: clicking the active button stops it
@@ -909,6 +920,9 @@ function speakInEnglish(lines, btn) {
   if (!lines) return;
   const linesArr = Array.isArray(lines) ? lines : [lines];
   if (!linesArr.length) return;
+
+  // Set the voice for this session BEFORE any fetchAbenaAudio calls
+  speechVoice = voice || ABENA_VOICE[currentLang] || "kwabena_eng";
 
   speechLines = linesArr.map(speechFriendly);
   speechCurrentLine = 0;
@@ -958,11 +972,20 @@ document.addEventListener("click", (e) => {
   if (e.target.closest(".sp-stop-btn")) stopActiveSpeech();
 });
 
-// Seek — fires on release (VLC-style); jumps to chosen line then re-fetches audio
+// Seek — pause audio silently while thumb is being dragged (no audio noise)
+document.addEventListener("input", (e) => {
+  if (!e.target.classList.contains("sp-seek")) return;
+  if (activeAudio && !activeAudio.paused) activeAudio.pause();
+  else if (!activeAudio && !speechIsPaused) window.speechSynthesis.pause();
+});
+
+// Seek — fires once on release; increment token so any stale onended is a safe no-op
 document.addEventListener("change", (e) => {
   if (!e.target.classList.contains("sp-seek")) return;
+  // Increment token FIRST so in-flight async speakAbenaLine from the OLD position
+  // sees myToken !== speechToken and bails out without calling hideActiveSeek().
+  speechToken++;
   const tok = speechToken;
-  // Stop current audio cleanly without invalidating the token yet
   stopAbenaAudio();
   window.speechSynthesis.cancel();
   if (speechTimeoutId) { clearTimeout(speechTimeoutId); speechTimeoutId = null; }
@@ -973,6 +996,48 @@ document.addEventListener("change", (e) => {
     if (pb) pb.textContent = "⏸";
   }
   speakAbenaLine(tok);
+});
+
+// ── TTS Language Picker ───────────────────────────────────────────────────
+// A small floating dropdown that lets the user choose English or Twi before
+// audio starts. Appears below whichever Listen button was tapped.
+let ttsPendingLines = null;
+let ttsPendingBtn   = null;
+
+function showTTSPicker(lines, btn) {
+  ttsPendingLines = lines;
+  ttsPendingBtn   = btn;
+  const picker = document.getElementById("tts-picker");
+  const rect   = btn.getBoundingClientRect();
+  // Position below button, clamped inside the viewport
+  picker.style.top  = `${rect.bottom + 6}px`;
+  picker.style.left = `${Math.min(rect.left, window.innerWidth - 170)}px`;
+  picker.classList.remove("hidden");
+  // Close if user clicks anywhere outside the picker (after this tick)
+  setTimeout(() => document.addEventListener("click", closeTTSPickerOutside, { once: true, capture: true }), 10);
+}
+
+function closeTTSPickerOutside(e) {
+  const picker = document.getElementById("tts-picker");
+  if (picker && !picker.contains(e.target)) picker.classList.add("hidden");
+}
+
+function hideTTSPicker() {
+  document.getElementById("tts-picker").classList.add("hidden");
+  ttsPendingLines = null;
+  ttsPendingBtn   = null;
+}
+
+// Picker button click → start speech with selected voice
+document.getElementById("tts-picker").addEventListener("click", (e) => {
+  const pickBtn = e.target.closest(".tts-pick-btn");
+  if (!pickBtn) return;
+  e.stopPropagation(); // don't trigger the outside-click close handler
+  const voice = pickBtn.dataset.voice;
+  const lines = ttsPendingLines;
+  const btn   = ttsPendingBtn;
+  hideTTSPicker();
+  if (lines && btn) speakInEnglish(lines, btn, voice);
 });
 
 // ── GPS + Open-Meteo rainfall integration ─────────────────────────────────
@@ -1157,7 +1222,8 @@ function renderResult(data) {
     const listenBtn = row.querySelector(".listen-btn");
     listenBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      speakInEnglish(cropSpeechText(rec), listenBtn);
+      if (activeSpeechBtn === listenBtn) { stopActiveSpeech(); return; }
+      showTTSPicker(cropSpeechText(rec), listenBtn);
     });
     box.appendChild(row);
   });
@@ -1206,7 +1272,9 @@ function renderTopPick(data) {
 
 let currentTopSpeechText = "";
 document.getElementById("why-listen-btn").addEventListener("click", () => {
-  speakInEnglish(currentTopSpeechText, document.getElementById("why-listen-btn"));
+  const btn = document.getElementById("why-listen-btn");
+  if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
+  showTTSPicker(currentTopSpeechText, btn);
 });
 
 document.getElementById("why-toggle").addEventListener("click", () => {
@@ -1237,7 +1305,9 @@ function openCropDetail(rec) {
 let currentDetailSpeechText = "";
 document.getElementById("crop-detail-listen-btn").addEventListener("click", (e) => {
   e.stopPropagation();
-  speakInEnglish(currentDetailSpeechText, document.getElementById("crop-detail-listen-btn"));
+  const btn = document.getElementById("crop-detail-listen-btn");
+  if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
+  showTTSPicker(currentDetailSpeechText, btn);
 });
 
 function closeCropDetail() {
@@ -1320,7 +1390,9 @@ function renderIdeas(data) {
 
 let currentIdeasSpeechText = "";
 document.getElementById("ideas-listen-btn").addEventListener("click", () => {
-  speakInEnglish(currentIdeasSpeechText, document.getElementById("ideas-listen-btn"));
+  const btn = document.getElementById("ideas-listen-btn");
+  if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
+  showTTSPicker(currentIdeasSpeechText, btn);
 });
 
 function renderFields(data) {

@@ -866,6 +866,37 @@ h1, h2, h3, h4,
 .sp-pause-btn { background: var(--forest); color: #fff; }
 .sp-stop-btn { background: rgba(220,80,60,0.8); color: #fff; }
 
+/* ── TTS Language Picker — floats near the Listen button ─────────────────── */
+.tts-picker {
+  position: fixed;
+  z-index: 500;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+.tts-picker.hidden { display: none; }
+.tts-pick-btn {
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--forest);
+  font-weight: 600;
+  transition: background 0.15s;
+  width: 100%;
+}
+.tts-pick-btn:hover,
+.tts-pick-btn:focus-visible { background: var(--card-alt); outline: none; }
+
 
 /* ── Profile view: not-logged-in auth section ─────────────────────────────
    Replaces the old full-screen dark overlay login/signup panels.
