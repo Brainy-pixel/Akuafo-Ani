@@ -647,5 +647,42 @@ def get_annual_rainfall():
         return jsonify({"error": str(exc)}), 502
 
 
+ABENA_TTS_URL = "https://abena.mobobi.com/playground/api/v1/tts/synthesize/"
+ABENA_ALLOWED_VOICES = {
+    "abena_twi_high", "abena_twi_lite",
+    "kwabena_eng", "akua_eng",
+    "kobby_gpe", "mawuli_ewe",
+}
+
+@app.route("/api/tts", methods=["POST"])
+def tts_proxy():
+    """Proxy to the Abena TTS API so the browser avoids CORS restrictions.
+    Accepts JSON {text, voice, speed} and forwards to Abena, returning
+    {audio_base64, duration_seconds, mime_type, status}."""
+    body = request.get_json(silent=True) or {}
+    text  = str(body.get("text", "")).strip()[:500]   # API limit: 500 chars
+    voice = str(body.get("voice", "kwabena_eng"))
+    speed = float(body.get("speed", 1.0))
+
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+    if voice not in ABENA_ALLOWED_VOICES:
+        voice = "kwabena_eng"
+
+    payload = json.dumps({"text": text, "voice": voice, "speed": speed}).encode()
+    req = urllib.request.Request(
+        ABENA_TTS_URL,
+        data=payload,
+        headers={"Content-Type": "application/json", "User-Agent": "AkuafoAni/1.0"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode())
+        return jsonify(data), 200
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 502
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000, use_reloader=False)

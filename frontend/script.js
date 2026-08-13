@@ -782,9 +782,47 @@ function updateSeekSlider() {
   if (slider) slider.value = speechCurrentLine;
 }
 
+// ── Abena TTS integration ────────────────────────────────────────────────
+// Voice map: Twi UI → Twi voice (female, only option); English → Ghanaian male accent.
+// Note: Abena currently has no Twi male voice; abena_twi_high is the best Twi option.
+const ABENA_VOICE = { tw: "abena_twi_lite", en: "kwabena_eng" };
+const abenaTTSCache = new Map(); // "voice:text" → blob URL (session-scoped)
+let   activeAudio   = null;      // HTMLAudioElement currently playing
+
+function abenaVoice() { return ABENA_VOICE[currentLang] || "kwabena_eng"; }
+
+async function fetchAbenaAudio(text) {
+  const key = `${abenaVoice()}:${text}`;
+  if (abenaTTSCache.has(key)) return abenaTTSCache.get(key);
+  const res = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: text.slice(0, 500), voice: abenaVoice(), speed: 1.0 }),
+  });
+  if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.status !== "success") throw new Error(data.error || "TTS error");
+  const bin = atob(data.audio_base64);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  abenaTTSCache.set(key, url);
+  return url;
+}
+
+function stopAbenaAudio() {
+  if (activeAudio) {
+    activeAudio.onended = null;
+    activeAudio.onerror = null;
+    activeAudio.pause();
+    activeAudio = null;
+  }
+}
+
 // ── Core speech functions ────────────────────────────────────────────────
 function stopActiveSpeech() {
   speechToken++;
+  stopAbenaAudio();
   window.speechSynthesis.cancel();
   if (speechTimeoutId) { clearTimeout(speechTimeoutId); speechTimeoutId = null; }
   if (activeSpeechReset) activeSpeechReset();
@@ -794,7 +832,53 @@ function stopActiveSpeech() {
   hideActiveSeek();
 }
 
-function speakCurrentLine(myToken) {
+// Shows "Stop" on the active listen button (called once audio actually starts)
+function markButtonPlaying() {
+  if (!activeSpeechBtn) return;
+  const label = activeSpeechBtn.querySelector(".listen-label");
+  const icon  = activeSpeechBtn.querySelector(".listen-icon");
+  if (label) label.textContent = "Stop";
+  if (icon)  icon.textContent  = "⏹";
+}
+
+// Abena path — async; falls back to browser TTS on any error
+async function speakAbenaLine(myToken) {
+  if (myToken !== speechToken || speechCurrentLine >= speechLines.length) {
+    if (myToken === speechToken) stopActiveSpeech();
+    return;
+  }
+  const text = speechLines[speechCurrentLine];
+  try {
+    const url = await fetchAbenaAudio(text);
+    if (myToken !== speechToken) return; // stopped while we were fetching
+    stopAbenaAudio();
+    const audio = new Audio(url);
+    activeAudio = audio;
+    markButtonPlaying();
+    // Pre-fetch the next line quietly so there's minimal gap
+    if (speechCurrentLine + 1 < speechLines.length) {
+      fetchAbenaAudio(speechLines[speechCurrentLine + 1]).catch(() => {});
+    }
+    audio.onended = () => {
+      if (myToken !== speechToken) return;
+      speechCurrentLine++;
+      updateSeekSlider();
+      if (speechCurrentLine < speechLines.length) {
+        speechTimeoutId = setTimeout(() => speakAbenaLine(myToken), 400);
+      } else {
+        stopActiveSpeech();
+      }
+    };
+    audio.onerror = () => { if (myToken === speechToken) stopActiveSpeech(); };
+    await audio.play();
+  } catch (err) {
+    console.warn("Abena TTS error, falling back to browser TTS:", err);
+    if (myToken === speechToken) speakBrowserLine(myToken);
+  }
+}
+
+// Browser TTS path — fallback when Abena is unavailable
+function speakBrowserLine(myToken) {
   if (myToken !== speechToken || speechCurrentLine >= speechLines.length) {
     if (myToken === speechToken) stopActiveSpeech();
     return;
@@ -802,38 +886,25 @@ function speakCurrentLine(myToken) {
   const utterance = new SpeechSynthesisUtterance(speechLines[speechCurrentLine]);
   utterance.lang = "en-US";
   utterance.rate = 0.85;
-
-  utterance.addEventListener("start", () => {
-    if (myToken !== speechToken) return;
-    if (activeSpeechBtn) {
-      const label = activeSpeechBtn.querySelector(".listen-label");
-      const icon  = activeSpeechBtn.querySelector(".listen-icon");
-      if (label) label.textContent = "Stop";
-      if (icon)  icon.textContent  = "⏹";
-    }
-  });
+  utterance.addEventListener("start", () => { if (myToken === speechToken) markButtonPlaying(); });
   utterance.addEventListener("end", () => {
     if (myToken !== speechToken) return;
     speechCurrentLine++;
     updateSeekSlider();
     if (speechCurrentLine < speechLines.length) {
-      speechTimeoutId = setTimeout(() => speakCurrentLine(myToken), LINE_PAUSE_MS);
+      speechTimeoutId = setTimeout(() => speakBrowserLine(myToken), LINE_PAUSE_MS);
     } else {
       stopActiveSpeech();
     }
   });
-  utterance.addEventListener("error", () => {
-    if (myToken === speechToken) stopActiveSpeech();
-  });
+  utterance.addEventListener("error", () => { if (myToken === speechToken) stopActiveSpeech(); });
   window.speechSynthesis.speak(utterance);
 }
 
 function speakInEnglish(lines, btn) {
-  if (!window.speechSynthesis) return;
-
   const wasThisButton = activeSpeechBtn === btn;
   stopActiveSpeech();
-  if (wasThisButton) return; // clicking a playing button again stops it
+  if (wasThisButton) return; // toggle: clicking the active button stops it
 
   if (!lines) return;
   const linesArr = Array.isArray(lines) ? lines : [lines];
@@ -849,42 +920,50 @@ function speakInEnglish(lines, btn) {
   const origLabel = label ? label.textContent : "";
   const origIcon  = icon  ? icon.textContent  : "";
 
+  // Show "Loading…" while first audio is being fetched
+  if (label) label.textContent = "Loading…";
+  if (icon)  icon.textContent  = "⏳";
+
   activeSpeechBtn = btn;
   activeSpeechReset = () => {
     if (label) label.textContent = origLabel;
     if (icon)  icon.textContent  = origIcon;
   };
 
-  speakCurrentLine(myToken);
+  speakAbenaLine(myToken);
   showSeekFor(btn);
 }
 
 // ── Inline seek strip controls (delegated — one handler covers all buttons) ─
 document.addEventListener("click", (e) => {
-  // Pause / Resume
+  // Pause / Resume — works for both Abena (HTMLAudioElement) and browser TTS
   const pauseBtn = e.target.closest(".sp-pause-btn");
-  if (pauseBtn && window.speechSynthesis) {
+  if (pauseBtn) {
     if (speechIsPaused) {
-      window.speechSynthesis.resume();
+      // Resume
+      if (activeAudio) activeAudio.play();
+      else window.speechSynthesis.resume();
       speechIsPaused = false;
       pauseBtn.textContent = "⏸";
     } else {
-      window.speechSynthesis.pause();
+      // Pause
+      if (activeAudio) activeAudio.pause();
+      else window.speechSynthesis.pause();
       speechIsPaused = true;
       pauseBtn.textContent = "▶";
     }
     return;
   }
   // Stop
-  if (e.target.closest(".sp-stop-btn")) {
-    stopActiveSpeech();
-  }
+  if (e.target.closest(".sp-stop-btn")) stopActiveSpeech();
 });
 
-// Seek — slider jumps to that line only when user releases (VLC-style, no mid-drag interruption)
+// Seek — fires on release (VLC-style); jumps to chosen line then re-fetches audio
 document.addEventListener("change", (e) => {
   if (!e.target.classList.contains("sp-seek")) return;
   const tok = speechToken;
+  // Stop current audio cleanly without invalidating the token yet
+  stopAbenaAudio();
   window.speechSynthesis.cancel();
   if (speechTimeoutId) { clearTimeout(speechTimeoutId); speechTimeoutId = null; }
   speechIsPaused = false;
@@ -893,7 +972,7 @@ document.addEventListener("change", (e) => {
     const pb = activeSeekWrap.querySelector(".sp-pause-btn");
     if (pb) pb.textContent = "⏸";
   }
-  speakCurrentLine(tok);
+  speakAbenaLine(tok);
 });
 
 // ── GPS + Open-Meteo rainfall integration ─────────────────────────────────
