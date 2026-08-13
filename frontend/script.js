@@ -922,7 +922,7 @@ function speakInEnglish(lines, btn, voice) {
   if (!linesArr.length) return;
 
   // Set the voice for this session BEFORE any fetchAbenaAudio calls
-  speechVoice = voice || ABENA_VOICE[currentLang] || "kwabena_eng";
+  speechVoice = voice || ABENA_VOICE[currentLanguage] || "kwabena_eng";
 
   speechLines = linesArr.map(speechFriendly);
   speechCurrentLine = 0;
