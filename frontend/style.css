@@ -292,16 +292,10 @@ h1, h2, h3, h4,
 .reasons-chevron { font-size: 11px; color: var(--muted); transition: transform .15s ease; }
 .reasons-toggle.open .reasons-chevron { transform: rotate(180deg); }
 
-.crop-reasons { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.crop-reasons li {
-  font-size: 12.5px; line-height: 1.4; color: var(--muted);
-  padding-left: 16px; position: relative;
-}
-.crop-reasons li::before {
-  content: "";
-  position: absolute; left: 0; top: 6px;
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--green-light);
+.crop-reasons { margin: 10px 0 0; padding: 0; }
+.crop-reasons p {
+  font-size: 12.5px; line-height: 1.6; color: var(--muted);
+  margin: 0;
 }
 
 .cert-text {
@@ -435,16 +429,10 @@ h1, h2, h3, h4,
 }
 .why-chevron { font-size: 13px; color: var(--muted); transition: transform .15s ease; }
 .why-toggle.open .why-chevron { transform: rotate(180deg); }
-.why-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.why-list li {
-  font-size: 13.5px; line-height: 1.45; color: var(--text);
-  padding-left: 18px; position: relative;
-}
-.why-list li::before {
-  content: "";
-  position: absolute; left: 0; top: 6px;
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--green-light);
+.why-list { margin: 14px 0 0; padding: 0; }
+.why-list p {
+  font-size: 13.5px; line-height: 1.65; color: var(--text);
+  margin: 0;
 }
 
 /* ── Voice feature (read English aloud) ──────────────────────────────────── */
@@ -603,16 +591,10 @@ h1, h2, h3, h4,
 .crop-detail-name { font-weight: 800; font-size: 28px; text-transform: capitalize; }
 .crop-detail-conf { font-weight: 700; font-size: 14px; color: var(--green); }
 .crop-detail-subtitle { font-weight: 700; font-size: 15px; margin: 18px 0 10px; color: var(--muted); }
-.crop-detail-reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.crop-detail-reasons li {
-  font-size: 14.5px; line-height: 1.5; color: var(--text);
-  padding-left: 20px; position: relative;
-}
-.crop-detail-reasons li::before {
-  content: "";
-  position: absolute; left: 0; top: 7px;
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--green-light);
+.crop-detail-reasons { margin: 0; padding: 0; }
+.crop-detail-reasons p {
+  font-size: 14.5px; line-height: 1.7; color: var(--text);
+  margin: 0;
 }
 
 /* ── Utility ──────────────────────────────────────────────────────────── */

@@ -734,9 +734,21 @@ document.getElementById("language-select").addEventListener("change", async (e) 
 // ── Voice feature: reads English text aloud via the browser's built-in
 // speech synthesis. Features: pause/resume, prev/next-line seeking via a
 // floating player bar, stop. Rate 0.85 for clarity. ──────────────────────
-function cropSpeechText(rec) {
+// Builds a rank-aware narrative paragraph for "Why this crop?" — replaces
+// the old per-parameter bullet list.  rank: 0 = top, 1 = second, 2 = third.
+function buildWhyNarrative(crop, rank) {
+  if (rank === 0) {
+    return `${crop} is highly recommended because the soil macronutrient values obtained from your soil sample — nitrogen, potassium, and phosphorus — fall within the range of values required for ${crop} cultivation and great crop yield. Environmental conditions like rainfall, humidity, and temperature are also favorable, and the soil pH is within a reasonable range to support growing ${crop} as the top recommended crop.`;
+  }
+  if (rank === 1) {
+    return `${crop} is a strong second recommendation for your soil. Most parameter values — including nitrogen, potassium, and phosphorus — match fairly well for ${crop} cultivation, though some are a bit further from the optimal range compared to the top recommended crop. They are, however, closer to what is required than the third recommendation, making ${crop} a good alternative choice.`;
+  }
+  return `${crop} is the last of the listed recommendations for your soil sample. The values for most parameters — including nitrogen, potassium, phosphorus, and environmental conditions — are further off from the optimal range for ${crop} compared to the top two recommendations. However, they are still closer to what ${crop} requires than the rest of the unranked crops, making it a viable option if the higher-ranked crops are not available.`;
+}
+
+function cropSpeechText(rec, rank = 0) {
   const pct = Math.round(rec.confidence * 100);
-  return [`${rec.crop}, ${pct} percent match.`, ...(rec.reasons || [])];
+  return [`${rec.crop}, ${pct} percent match.`, buildWhyNarrative(rec.crop, rank)];
 }
 
 function speechFriendly(line) {
@@ -1180,7 +1192,7 @@ function renderResult(data) {
   box.innerHTML = "";
   data.recommendations.forEach((rec, i) => {
     const pct = Math.round(rec.confidence * 100);
-    const reasons = rec.reasons || [];
+    const narrative = buildWhyNarrative(rec.crop, i);
     const row = document.createElement("div");
     row.className = "crop-card";
     row.innerHTML = `
@@ -1194,27 +1206,25 @@ function renderResult(data) {
           <div class="crop-conf">${pct}% match</div>
         </div>
         <div class="crop-bar-track"><div class="crop-bar-fill" style="width:${pct}%"></div></div>
-        ${reasons.length ? `
-          <button class="reasons-toggle" type="button" aria-expanded="false">
-            <span>${t("dashboard.whyThisCrop")}</span>
-            <span class="reasons-chevron">&#9662;</span>
-          </button>
-          <ul class="crop-reasons" style="display:none;">${reasons.map((r) => `<li>${r}</li>`).join("")}</ul>
-        ` : ""}
+        <button class="reasons-toggle" type="button" aria-expanded="false">
+          <span>${t("dashboard.whyThisCrop")}</span>
+          <span class="reasons-chevron">&#9662;</span>
+        </button>
+        <div class="crop-reasons" style="display:none;"><p>${narrative}</p></div>
         <button class="listen-btn" type="button">
           <span class="listen-icon">&#128266;</span>
           <span class="listen-label">${t("common.listen")}</span>
         </button>
       </div>
     `;
-    row.addEventListener("click", () => openCropDetail(rec));
+    row.addEventListener("click", () => openCropDetail(rec, i));
     const toggle = row.querySelector(".reasons-toggle");
     if (toggle) {
       toggle.addEventListener("click", (e) => {
         e.stopPropagation();
         const list = row.querySelector(".crop-reasons");
         const open = list.style.display !== "none";
-        list.style.display = open ? "none" : "flex";
+        list.style.display = open ? "none" : "block";
         toggle.setAttribute("aria-expanded", String(!open));
         toggle.classList.toggle("open", !open);
       });
@@ -1223,7 +1233,7 @@ function renderResult(data) {
     listenBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (activeSpeechBtn === listenBtn) { stopActiveSpeech(); return; }
-      showTTSPicker(cropSpeechText(rec), listenBtn);
+      showTTSPicker(cropSpeechText(rec, i), listenBtn);
     });
     box.appendChild(row);
   });
@@ -1256,18 +1266,13 @@ function renderTopPick(data) {
   const whyCard = document.getElementById("why-card");
   const whyList = document.getElementById("why-list");
   const whyToggle = document.getElementById("why-toggle");
-  const reasons = top.reasons || [];
-  if (reasons.length) {
-    whyList.innerHTML = reasons.map((r) => `<li>${r}</li>`).join("");
-    whyList.style.display = "none";
-    whyToggle.setAttribute("aria-expanded", "false");
-    whyToggle.classList.remove("open");
-    whyCard.style.display = "block";
-    currentTopSpeechText = cropSpeechText(top);
-  } else {
-    whyCard.style.display = "none";
-    currentTopSpeechText = "";
-  }
+  // Show narrative paragraph; always present when we have a top recommendation
+  whyList.innerHTML = `<p>${buildWhyNarrative(top.crop, 0)}</p>`;
+  whyList.style.display = "none";
+  whyToggle.setAttribute("aria-expanded", "false");
+  whyToggle.classList.remove("open");
+  whyCard.style.display = "block";
+  currentTopSpeechText = cropSpeechText(top, 0);
 }
 
 let currentTopSpeechText = "";
@@ -1287,7 +1292,7 @@ document.getElementById("why-toggle").addEventListener("click", () => {
 });
 
 // ── Crop detail overlay (click a crop to read about it, alone, full screen) ──
-function openCropDetail(rec) {
+function openCropDetail(rec, rank = 0) {
   const pct = Math.round(rec.confidence * 100);
   const img = cropImage(rec.crop);
 
@@ -1295,8 +1300,8 @@ function openCropDetail(rec) {
   document.getElementById("crop-detail-img").alt = rec.crop;
   document.getElementById("crop-detail-name").textContent = rec.crop;
   document.getElementById("crop-detail-conf").textContent = `${pct}% match for your current soil sample`;
-  document.getElementById("crop-detail-reasons").innerHTML = (rec.reasons || []).map((r) => `<li>${r}</li>`).join("");
-  currentDetailSpeechText = cropSpeechText(rec);
+  document.getElementById("crop-detail-reasons").innerHTML = `<p>${buildWhyNarrative(rec.crop, rank)}</p>`;
+  currentDetailSpeechText = cropSpeechText(rec, rank);
 
   document.getElementById("crop-detail-overlay").classList.add("open");
   document.body.style.overflow = "hidden";
@@ -1317,7 +1322,7 @@ function closeCropDetail() {
 
 document.getElementById("top-pick").addEventListener("click", () => {
   if (lastData && lastData.recommendations && lastData.recommendations[0]) {
-    openCropDetail(lastData.recommendations[0]);
+    openCropDetail(lastData.recommendations[0], 0);
   }
 });
 document.getElementById("crop-detail-back").addEventListener("click", closeCropDetail);
