@@ -60,13 +60,13 @@ body {
 #bg-ghost {
   position: fixed; inset: 0; z-index: -1;
   background: url(images/bg/bg1.jpg) center / cover no-repeat;
-  opacity: 0.15;
+  opacity: 0.30;
   pointer-events: none;
 }
 /* Slightly lower in dark mode for comfortable contrast */
-:root[data-theme="dark"] #bg-ghost { opacity: 0.10; }
+:root[data-theme="dark"] #bg-ghost { opacity: 0.20; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) #bg-ghost { opacity: 0.10; }
+  :root:not([data-theme="light"]) #bg-ghost { opacity: 0.20; }
 }
 
 /* ── Aptos heading font — all section titles, card names, auth headings ─── */
