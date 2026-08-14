@@ -44,31 +44,24 @@ body {
 }
 
 /* ── Ghost background system ─────────────────────────────────────────────────
-   #page-bg  (z-index -2): solid page colour so the body isn't bare
-   #bg-slideshow (z-index -1): faint rotating images in front of that colour
-   All real content sits above both layers in normal stacking order.        ── */
+   #page-bg  (z-index -2): solid page colour so the body is never bare
+   #bg-ghost (z-index -1): single image at low opacity — visible in gaps
+   between cards; cards/header/nav are opaque so text stays fully readable. ── */
 #page-bg {
   position: fixed; inset: 0; z-index: -2;
   background: var(--bg);
   pointer-events: none;
 }
-#bg-slideshow {
+#bg-ghost {
   position: fixed; inset: 0; z-index: -1;
-  overflow: hidden;
+  background: url(images/bg/bg1.jpg) center / cover no-repeat;
+  opacity: 0.10;
   pointer-events: none;
 }
-.bg-slide {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover; object-position: center;
-  opacity: 0;
-  transition: opacity 2s ease-in-out;
-}
-.bg-slide.active { opacity: 0.10; }
-/* Slightly lower opacity in dark mode so contrast stays comfortable */
-:root[data-theme="dark"] .bg-slide.active { opacity: 0.07; }
+/* Slightly lower in dark mode for comfortable contrast */
+:root[data-theme="dark"] #bg-ghost { opacity: 0.07; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .bg-slide.active { opacity: 0.07; }
+  :root:not([data-theme="light"]) #bg-ghost { opacity: 0.07; }
 }
 
 /* ── Aptos heading font — all section titles, card names, auth headings ─── */
