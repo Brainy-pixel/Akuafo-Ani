@@ -60,7 +60,7 @@ body {
 #bg-ghost {
   position: fixed; inset: 0; z-index: -1;
   background: url(images/bg/bg1.jpg) center / cover no-repeat;
-  opacity: 0.65;
+  opacity: 0.70;
   pointer-events: none;
 }
 /* Slightly lower in dark mode for comfortable contrast */
