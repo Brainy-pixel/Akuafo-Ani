@@ -8,6 +8,15 @@
 </head>
 <body>
 
+<!-- Ghost background: solid colour layer + low-opacity image slideshow (45 s cycle) -->
+<div id="page-bg" aria-hidden="true"></div>
+<div id="bg-slideshow" aria-hidden="true">
+  <img src="images/bg/bg1.jpg" class="bg-slide active" alt="">
+  <img src="images/bg/bg2.jpg" class="bg-slide" alt="">
+  <img src="images/bg/bg3.jpg" class="bg-slide" alt="">
+  <img src="images/bg/bg4.jpg" class="bg-slide" alt="">
+</div>
+
 <!-- ─────────────────────── COVER SCREEN (Get Started) ─────────────────────── -->
 <div class="auth-screen hidden" id="auth-screen">
   <div class="auth-slideshow" id="auth-slideshow"></div>

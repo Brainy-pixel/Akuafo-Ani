@@ -1495,3 +1495,15 @@ document.getElementById("profile-back-btn").addEventListener("click", () => {
     showAuthScreen();
   }
 })();
+
+// Ghost background slideshow: cycles the 4 faint bg images every 45 seconds.
+(function () {
+  const slides = document.querySelectorAll(".bg-slide");
+  if (!slides.length) return;
+  let idx = 0;
+  setInterval(function () {
+    slides[idx].classList.remove("active");
+    idx = (idx + 1) % slides.length;
+    slides[idx].classList.add("active");
+  }, 45000);
+}());
