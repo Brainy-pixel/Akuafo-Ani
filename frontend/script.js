@@ -859,11 +859,25 @@ function stopAbenaAudio() {
 }
 
 // ── Core speech functions ────────────────────────────────────────────────
+// When Twi voice is selected the narrative element's text is swapped to Twi;
+// these two vars track the element so it can be restored when speech stops.
+let _narrativeEl       = null;
+let _narrativeOrigHTML = null;
+
+function _restoreNarrative() {
+  if (_narrativeEl && _narrativeOrigHTML !== null) {
+    _narrativeEl.innerHTML = _narrativeOrigHTML;
+  }
+  _narrativeEl       = null;
+  _narrativeOrigHTML = null;
+}
+
 function stopActiveSpeech() {
   speechToken++;
   stopAbenaAudio();
   window.speechSynthesis.cancel();
   if (speechTimeoutId) { clearTimeout(speechTimeoutId); speechTimeoutId = null; }
+  _restoreNarrative(); // revert displayed text back to English
   if (activeSpeechReset) activeSpeechReset();
   activeSpeechBtn = null;
   activeSpeechReset = null;
@@ -1031,14 +1045,18 @@ document.addEventListener("change", (e) => {
 // ── TTS Language Picker ───────────────────────────────────────────────────
 // A small floating dropdown that lets the user choose English or Twi before
 // audio starts. Appears below whichever Listen button was tapped.
-let ttsPendingLines   = null;
-let ttsPendingLinesTw = null; // Twi version — used when abena_twi_lite is selected
-let ttsPendingBtn     = null;
+let ttsPendingLines       = null;
+let ttsPendingLinesTw     = null; // Twi audio lines — used when abena_twi_lite is selected
+let ttsPendingBtn         = null;
+let ttsPendingNarrativeEl = null; // DOM element showing the narrative text
+let ttsPendingNarrativeTw = null; // Twi narrative text to display when Twi is chosen
 
-function showTTSPicker(lines, btn, linesTw = null) {
-  ttsPendingLines   = lines;
-  ttsPendingLinesTw = linesTw;
-  ttsPendingBtn     = btn;
+function showTTSPicker(lines, btn, linesTw = null, narrativeEl = null, narrativeTw = null) {
+  ttsPendingLines       = lines;
+  ttsPendingLinesTw     = linesTw;
+  ttsPendingBtn         = btn;
+  ttsPendingNarrativeEl = narrativeEl;
+  ttsPendingNarrativeTw = narrativeTw;
   const picker = document.getElementById("tts-picker");
   const rect   = btn.getBoundingClientRect();
   // Position below button, clamped inside the viewport
@@ -1056,9 +1074,11 @@ function closeTTSPickerOutside(e) {
 
 function hideTTSPicker() {
   document.getElementById("tts-picker").classList.add("hidden");
-  ttsPendingLines   = null;
-  ttsPendingLinesTw = null;
-  ttsPendingBtn     = null;
+  ttsPendingLines       = null;
+  ttsPendingLinesTw     = null;
+  ttsPendingBtn         = null;
+  ttsPendingNarrativeEl = null;
+  ttsPendingNarrativeTw = null;
 }
 
 // Picker button click → start speech with selected voice
@@ -1066,12 +1086,23 @@ document.getElementById("tts-picker").addEventListener("click", (e) => {
   const pickBtn = e.target.closest(".tts-pick-btn");
   if (!pickBtn) return;
   e.stopPropagation(); // don't trigger the outside-click close handler
-  const voice   = pickBtn.dataset.voice;
-  // Use Twi lines when Twi voice is selected and Twi lines exist; else English
-  const isTwi   = voice === "abena_twi_lite";
-  const lines   = (isTwi && ttsPendingLinesTw) ? ttsPendingLinesTw : ttsPendingLines;
-  const btn     = ttsPendingBtn;
+  const voice = pickBtn.dataset.voice;
+  const isTwi = voice === "abena_twi_lite";
+
+  // Capture pending state before hideTTSPicker clears it
+  const lines       = (isTwi && ttsPendingLinesTw) ? ttsPendingLinesTw : ttsPendingLines;
+  const btn         = ttsPendingBtn;
+  const narrativeEl = ttsPendingNarrativeEl;
+  const narrativeTw = ttsPendingNarrativeTw;
   hideTTSPicker();
+
+  // Swap displayed narrative text to Twi (restored by stopActiveSpeech when done)
+  if (isTwi && narrativeEl && narrativeTw) {
+    _narrativeOrigHTML = narrativeEl.innerHTML;
+    _narrativeEl       = narrativeEl;
+    narrativeEl.innerHTML = `<p>${narrativeTw}</p>`;
+  }
+
   if (lines && btn) speakInEnglish(lines, btn, voice);
 });
 
@@ -1256,7 +1287,10 @@ function renderResult(data) {
     listenBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (activeSpeechBtn === listenBtn) { stopActiveSpeech(); return; }
-      showTTSPicker(cropSpeechText(rec, i), listenBtn, cropSpeechTextTwi(rec, i));
+      showTTSPicker(
+        cropSpeechText(rec, i), listenBtn, cropSpeechTextTwi(rec, i),
+        row.querySelector(".crop-reasons"), buildWhyNarrativeTwi(rec.crop, i)
+      );
     });
     box.appendChild(row);
   });
@@ -1297,14 +1331,19 @@ function renderTopPick(data) {
   whyCard.style.display = "block";
   currentTopSpeechText   = cropSpeechText(top, 0);
   currentTopSpeechTextTw = cropSpeechTextTwi(top, 0);
+  currentTopNarrativeTwi = buildWhyNarrativeTwi(top.crop, 0);
 }
 
 let currentTopSpeechText   = "";
 let currentTopSpeechTextTw = null;
+let currentTopNarrativeTwi = null;
 document.getElementById("why-listen-btn").addEventListener("click", () => {
   const btn = document.getElementById("why-listen-btn");
   if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
-  showTTSPicker(currentTopSpeechText, btn, currentTopSpeechTextTw);
+  showTTSPicker(
+    currentTopSpeechText, btn, currentTopSpeechTextTw,
+    document.getElementById("why-list"), currentTopNarrativeTwi
+  );
 });
 
 document.getElementById("why-toggle").addEventListener("click", () => {
@@ -1328,6 +1367,7 @@ function openCropDetail(rec, rank = 0) {
   document.getElementById("crop-detail-reasons").innerHTML = `<p>${buildWhyNarrative(rec.crop, rank)}</p>`;
   currentDetailSpeechText   = cropSpeechText(rec, rank);
   currentDetailSpeechTextTw = cropSpeechTextTwi(rec, rank);
+  currentDetailNarrativeTwi = buildWhyNarrativeTwi(rec.crop, rank);
 
   document.getElementById("crop-detail-overlay").classList.add("open");
   document.body.style.overflow = "hidden";
@@ -1335,11 +1375,15 @@ function openCropDetail(rec, rank = 0) {
 
 let currentDetailSpeechText   = "";
 let currentDetailSpeechTextTw = null;
+let currentDetailNarrativeTwi = null;
 document.getElementById("crop-detail-listen-btn").addEventListener("click", (e) => {
   e.stopPropagation();
   const btn = document.getElementById("crop-detail-listen-btn");
   if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
-  showTTSPicker(currentDetailSpeechText, btn, currentDetailSpeechTextTw);
+  showTTSPicker(
+    currentDetailSpeechText, btn, currentDetailSpeechTextTw,
+    document.getElementById("crop-detail-reasons"), currentDetailNarrativeTwi
+  );
 });
 
 function closeCropDetail() {
