@@ -746,9 +746,27 @@ function buildWhyNarrative(crop, rank) {
   return `${crop} is the last of the listed recommendations for your soil sample. The values for most parameters (including nitrogen, potassium, phosphorus and environmental conditions) are further off from the optimal range for ${crop} compared to the top two recommendations. However, they are still closer to what ${crop} requires than the rest of the unranked crops, making it a viable option if the higher ranked crops are not available.`;
 }
 
+// Twi version of the narrative — technical terms (nitrogen, potassium, phosphorus,
+// pH, rainfall, humidity, temperature) are kept in English as they are commonly
+// used in Ghanaian Twi agricultural speech.
+function buildWhyNarrativeTwi(crop, rank) {
+  if (rank === 0) {
+    return `Wɔde ${crop} hyɛ ase wɔ ɔkwan a ɛtɔ so ɔne so wɔ wo asase nsiesie yi mu. Wo asase mu nitrogen, potassium ne phosphorus kari krataa bɛtim nea ${crop} hia no yiye, na ɛma nnɔbae pa. Rainfall, humidity ne temperature nhyehyɛe nso yɛ pa ma ${crop}, na asase pH nso wɔ ɛnsɔ a ɛhia no mu. Enti ${crop} na ɛyɛ adeyɛ a ɛfata wo asase no pa ara.`;
+  }
+  if (rank === 1) {
+    return `${crop} yɛ adeyɛ a ɛtɔ so ɛnum mu ɔne pa wɔ wo asase ho. Nitrogen, potassium ne phosphorus kari krataa pii bɛtim nea ${crop} hia no yiye, nanso bi kaa adeyɛ a ɛtɔ so ɔne no kwan bogya kakra. Ɛkaa adeyɛ a ɛtɔ so ɔne no, wɔhia no kwan bogya a ɛyɛ den sen no, enti ${crop} yɛ ɔpɛsɛmpɛ pa.`;
+  }
+  return `${crop} na ɛyɛ adeyɛ a ɛba ɔkwan mu ɔne akyiri wɔ wo asase krataa ho. Nitrogen, potassium, phosphorus ne ɔhaw a ɛba soro nhyehyɛe pii wɔ ${crop} dɛ wɔhia no kwan bogya akyi sen adeyɛ a ɛtɔ so ɔne ne ɔne mmienu no. Nanso ɛkaa nnua a wɔankyerɛ no biara a, wɔhia ${crop} dɛ wɔhia no kwan bogya a ɛyɛ den, enti sɛ nnua a ɛtɔ so ɔne mmienu no nni ho a, ${crop} bɛyɛ ɔpɛsɛmpɛ pa.`;
+}
+
 function cropSpeechText(rec, rank = 0) {
   const pct = Math.round(rec.confidence * 100);
   return [`${rec.crop}, ${pct} percent match.`, buildWhyNarrative(rec.crop, rank)];
+}
+
+function cropSpeechTextTwi(rec, rank = 0) {
+  const pct = Math.round(rec.confidence * 100);
+  return [`${rec.crop}, ${pct} ɔha mu.`, buildWhyNarrativeTwi(rec.crop, rank)];
 }
 
 function speechFriendly(line) {
@@ -1013,12 +1031,14 @@ document.addEventListener("change", (e) => {
 // ── TTS Language Picker ───────────────────────────────────────────────────
 // A small floating dropdown that lets the user choose English or Twi before
 // audio starts. Appears below whichever Listen button was tapped.
-let ttsPendingLines = null;
-let ttsPendingBtn   = null;
+let ttsPendingLines   = null;
+let ttsPendingLinesTw = null; // Twi version — used when abena_twi_lite is selected
+let ttsPendingBtn     = null;
 
-function showTTSPicker(lines, btn) {
-  ttsPendingLines = lines;
-  ttsPendingBtn   = btn;
+function showTTSPicker(lines, btn, linesTw = null) {
+  ttsPendingLines   = lines;
+  ttsPendingLinesTw = linesTw;
+  ttsPendingBtn     = btn;
   const picker = document.getElementById("tts-picker");
   const rect   = btn.getBoundingClientRect();
   // Position below button, clamped inside the viewport
@@ -1036,8 +1056,9 @@ function closeTTSPickerOutside(e) {
 
 function hideTTSPicker() {
   document.getElementById("tts-picker").classList.add("hidden");
-  ttsPendingLines = null;
-  ttsPendingBtn   = null;
+  ttsPendingLines   = null;
+  ttsPendingLinesTw = null;
+  ttsPendingBtn     = null;
 }
 
 // Picker button click → start speech with selected voice
@@ -1045,9 +1066,11 @@ document.getElementById("tts-picker").addEventListener("click", (e) => {
   const pickBtn = e.target.closest(".tts-pick-btn");
   if (!pickBtn) return;
   e.stopPropagation(); // don't trigger the outside-click close handler
-  const voice = pickBtn.dataset.voice;
-  const lines = ttsPendingLines;
-  const btn   = ttsPendingBtn;
+  const voice   = pickBtn.dataset.voice;
+  // Use Twi lines when Twi voice is selected and Twi lines exist; else English
+  const isTwi   = voice === "abena_twi_lite";
+  const lines   = (isTwi && ttsPendingLinesTw) ? ttsPendingLinesTw : ttsPendingLines;
+  const btn     = ttsPendingBtn;
   hideTTSPicker();
   if (lines && btn) speakInEnglish(lines, btn, voice);
 });
@@ -1233,7 +1256,7 @@ function renderResult(data) {
     listenBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (activeSpeechBtn === listenBtn) { stopActiveSpeech(); return; }
-      showTTSPicker(cropSpeechText(rec, i), listenBtn);
+      showTTSPicker(cropSpeechText(rec, i), listenBtn, cropSpeechTextTwi(rec, i));
     });
     box.appendChild(row);
   });
@@ -1272,14 +1295,16 @@ function renderTopPick(data) {
   whyToggle.setAttribute("aria-expanded", "false");
   whyToggle.classList.remove("open");
   whyCard.style.display = "block";
-  currentTopSpeechText = cropSpeechText(top, 0);
+  currentTopSpeechText   = cropSpeechText(top, 0);
+  currentTopSpeechTextTw = cropSpeechTextTwi(top, 0);
 }
 
-let currentTopSpeechText = "";
+let currentTopSpeechText   = "";
+let currentTopSpeechTextTw = null;
 document.getElementById("why-listen-btn").addEventListener("click", () => {
   const btn = document.getElementById("why-listen-btn");
   if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
-  showTTSPicker(currentTopSpeechText, btn);
+  showTTSPicker(currentTopSpeechText, btn, currentTopSpeechTextTw);
 });
 
 document.getElementById("why-toggle").addEventListener("click", () => {
@@ -1301,18 +1326,20 @@ function openCropDetail(rec, rank = 0) {
   document.getElementById("crop-detail-name").textContent = rec.crop;
   document.getElementById("crop-detail-conf").textContent = `${pct}% match for your current soil sample`;
   document.getElementById("crop-detail-reasons").innerHTML = `<p>${buildWhyNarrative(rec.crop, rank)}</p>`;
-  currentDetailSpeechText = cropSpeechText(rec, rank);
+  currentDetailSpeechText   = cropSpeechText(rec, rank);
+  currentDetailSpeechTextTw = cropSpeechTextTwi(rec, rank);
 
   document.getElementById("crop-detail-overlay").classList.add("open");
   document.body.style.overflow = "hidden";
 }
 
-let currentDetailSpeechText = "";
+let currentDetailSpeechText   = "";
+let currentDetailSpeechTextTw = null;
 document.getElementById("crop-detail-listen-btn").addEventListener("click", (e) => {
   e.stopPropagation();
   const btn = document.getElementById("crop-detail-listen-btn");
   if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
-  showTTSPicker(currentDetailSpeechText, btn);
+  showTTSPicker(currentDetailSpeechText, btn, currentDetailSpeechTextTw);
 });
 
 function closeCropDetail() {
