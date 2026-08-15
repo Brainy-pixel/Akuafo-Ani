@@ -12,8 +12,11 @@ Run with:
     python app.py
 Then open http://127.0.0.1:5000 in your browser.
 """
+import io
 import os
 import json
+import wave
+import base64
 import secrets
 import urllib.request
 import urllib.parse
@@ -66,6 +69,32 @@ def _load_or_create_secret_key():
 
 app.secret_key = _load_or_create_secret_key()
 app.config.update(SESSION_COOKIE_SAMESITE="Lax")
+
+# ── Stable-Twi-TTS local model ─────────────────────────────────────────────
+# Downloaded once into models/ at build time (render.yaml) or on first run.
+# When loaded, Twi voice requests are served locally (no Abena quota used).
+_TWI_TTS_MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
+_twi_tts = None
+try:
+    from stable_twi_tts import StableTwiTTS
+    _twi_tts = StableTwiTTS.from_pretrained(cache_dir=_TWI_TTS_MODEL_DIR, quiet=True)
+    print("[twi-tts] model loaded OK")
+except Exception as _e:
+    print(f"[twi-tts] unavailable, Twi audio will fall back to browser TTS: {_e}")
+
+
+def _synthesis_to_wav_b64(synth) -> tuple[str, float]:
+    """Convert a Synthesis object to (base64-WAV-string, duration_seconds)."""
+    import numpy as np
+    buf = io.BytesIO()
+    pcm = np.clip(synth.audio, -1.0, 1.0)
+    pcm = (pcm * 32767.0).astype(np.int16)
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(synth.sample_rate)
+        w.writeframes(pcm.tobytes())
+    return base64.b64encode(buf.getvalue()).decode("ascii"), round(synth.duration, 2)
 
 
 # Emails are always lowercased before storage/lookup (see signup/login), so
@@ -659,16 +688,40 @@ ABENA_API_KEY = os.environ.get("ABENA_API_KEY", "")
 
 @app.route("/api/tts", methods=["POST"])
 def tts_proxy():
-    """Proxy to the Abena TTS API so the browser avoids CORS restrictions.
-    Accepts JSON {text, voice, speed} and forwards to Abena, returning
-    {audio_base64, duration_seconds, mime_type, status}."""
+    """TTS endpoint — routes by voice:
+      • Twi voices (abena_twi_lite / abena_twi_high): served locally via
+        stable-twi-tts ONNX model (no quota, no external API).
+      • English/other voices: forwarded to the Abena cloud API.
+    Returns {audio_base64, duration_seconds, mime_type, status}.
+    """
     body = request.get_json(silent=True) or {}
-    text  = str(body.get("text", "")).strip()[:500]   # API limit: 500 chars
+    text  = str(body.get("text", "")).strip()[:500]
     voice = str(body.get("voice", "kwabena_eng"))
     speed = float(body.get("speed", 1.0))
 
     if not text:
         return jsonify({"error": "text is required"}), 400
+
+    # ── Twi: use local ONNX model ─────────────────────────────────────────
+    if voice in ("abena_twi_lite", "abena_twi_high") and _twi_tts:
+        try:
+            # length_scale is the inverse of speed (slower = longer duration)
+            length_scale = 1.0 / max(float(speed), 0.25)
+            synth = _twi_tts.synthesize(
+                text, voice="twi-1", language="mixed",
+                length_scale=length_scale,
+            )
+            audio_b64, duration = _synthesis_to_wav_b64(synth)
+            return jsonify({
+                "status": "success",
+                "audio_base64": audio_b64,
+                "duration_seconds": duration,
+                "mime_type": "audio/wav",
+            })
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+
+    # ── English / other voices: forward to Abena cloud API ───────────────
     if voice not in ABENA_ALLOWED_VOICES:
         voice = "kwabena_eng"
 
@@ -678,10 +731,7 @@ def tts_proxy():
         headers["Authorization"] = f"Bearer {ABENA_API_KEY}"
 
     req = urllib.request.Request(
-        ABENA_TTS_URL,
-        data=payload,
-        headers=headers,
-        method="POST",
+        ABENA_TTS_URL, data=payload, headers=headers, method="POST",
     )
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:

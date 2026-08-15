@@ -3,7 +3,7 @@ services:
     name: akuafo-ani
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python -c "from stable_twi_tts import StableTwiTTS; StableTwiTTS.from_pretrained(cache_dir='models/', quiet=True)"
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
