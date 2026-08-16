@@ -30,7 +30,7 @@ OUTPUT_DIR = "outputs"
 DATA_PATH = "Crop_recommendation_filtered4.csv"
 CONF_THRESHOLD   = 0.30   # below this, blend in nearest-neighbour "fuzzy" matches
 MIN_SLOT_CONF    = 0.08   # individual recommendation slots below this are suppressed
-NPK_TOLERANCE    = 10.0   # ±10 mg/kg buffer applied to per-crop N/P/K training range
+NPK_TOLERANCE    = 20.0   # ±20 mg/kg buffer applied to per-crop N/P/K training range
 DB_PATH = "users.db"
 SECRET_KEY_PATH = os.path.join(OUTPUT_DIR, ".flask_secret")
 
@@ -295,11 +295,12 @@ def predict_crop_fuzzy(values: dict):
     raw = np.array([values.get(f) for f in FEATURES], dtype=float)
     known_mask = ~np.isnan(raw)
 
-    # ── Guard: all-zero / near-zero NPK means no soil data provided ───────
+    # ── Guard: no-match only when 2 or more nutrients are zero/near-zero ───
     n_val = values.get("N") or 0
     p_val = values.get("P") or 0
     k_val = values.get("K") or 0
-    if n_val < 1 and p_val < 1 and k_val < 1:
+    zero_count = sum(1 for v in (n_val, p_val, k_val) if v < 1)
+    if zero_count >= 2:
         return [], False, True  # no_match
 
     filled = raw.copy()
