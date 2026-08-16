@@ -664,24 +664,52 @@ def predict():
 
     # ── No-match path ─────────────────────────────────────────────────────
     if no_match:
-        ph_val  = filled["ph"]
-        ph_mean = sum(p["ph"]["mean"] for p in crop_profiles.values()) / max(len(crop_profiles), 1)
+        ph_val = filled["ph"]
+
+        # Build the pH tip and advice only when pH is outside the acceptable band
+        if ph_val < 5.5:
+            # Acidic soil — apply a base (alkaline substance) to raise pH
+            ph_tip = (
+                f"Soil pH is {round(ph_val, 2)}, which is acidic (below 5.5). "
+                "Apply agricultural lime (calcium carbonate, a basic compound) to neutralise "
+                "the acidity and raise pH into the ideal range of 5.5 – 7.0."
+            )
+            ph_advice = (
+                f"Soil pH of {round(ph_val, 2)} is too acidic for most crops. "
+                "Apply agricultural lime (calcium carbonate) to raise pH — lime is alkaline and "
+                "neutralises excess soil acids, making nutrients more available for plant uptake."
+            )
+        elif ph_val > 7.0:
+            # Alkaline soil — apply an acid to lower pH
+            ph_tip = (
+                f"Soil pH is {round(ph_val, 2)}, which is alkaline (above 7.0). "
+                "Apply elemental sulfur or an acidifying fertilizer (e.g. ammonium sulfate) to "
+                "lower pH into the ideal range of 5.5 – 7.0."
+            )
+            ph_advice = (
+                f"Soil pH of {round(ph_val, 2)} is too alkaline for most crops. "
+                "Apply elemental sulfur, which is oxidised by soil bacteria into sulfuric acid, "
+                "gradually lowering pH to the preferred range of 5.5 – 7.0."
+            )
+        else:
+            ph_tip   = None
+            ph_advice = None
 
         general_tips = [
             "Apply a balanced NPK fertilizer (e.g. 15-15-15) to build up soil nutrient levels "
             "before the next planting season.",
             "Conduct a full soil test to identify which nutrients are most deficient.",
-            f"Current soil pH is {round(ph_val, 2)} — the ideal range for most crops is 5.5 – 7.0. "
-            + (
-                "Apply agricultural lime (calcium carbonate) to raise pH."
-                if ph_val < 5.5
-                else "Apply elemental sulfur or an acidifying fertilizer to lower pH."
-                if ph_val > 7.0
-                else "pH is within the general acceptable range, but verify for your target crop."
-            ),
             "Improve soil organic matter by incorporating compost or well-rotted manure.",
             "Ensure proper drainage to avoid waterlogging, which limits nutrient uptake.",
         ]
+        if ph_tip:
+            general_tips.insert(2, ph_tip)  # insert after the soil-test tip
+
+        base_advice = (
+            "Consider applying a balanced NPK fertilizer to improve soil nutrient levels "
+            "before the next planting season."
+        )
+        advice = f"{ph_advice} {base_advice}" if ph_advice else base_advice
 
         return jsonify({
             "no_match": True,
@@ -692,11 +720,7 @@ def predict():
                 "characteristics do not fall within the acceptable range for any of the "
                 "recommended crops."
             ),
-            "advice": (
-                "Consider applying fertilizer to improve soil nutrient levels and neutralising "
-                f"the soil pH to the preferred standard (ideally 5.5 – 7.0, currently {round(ph_val, 2)}). "
-                "Add lime to raise pH (too acidic) or sulfur to lower pH (too alkaline) before sowing."
-            ),
+            "advice": advice,
             "improvement_tips": general_tips,
         })
 
