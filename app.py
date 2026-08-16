@@ -211,25 +211,25 @@ def _improvement_tips(crop: str, filled: dict) -> list[str]:
 
     if n_val < n_mean - 10:
         tips.append(f"Increase nitrogen by applying a nitrogen-rich fertilizer "
-                    f"(e.g. urea or ammonium nitrate) — current {round(n_val,1)} kg/ha "
-                    f"is below the optimal ~{round(n_mean,1)} kg/ha for {crop}.")
+                    f"(e.g. urea or ammonium nitrate). Current level is {round(n_val,1)} kg/ha, "
+                    f"below the optimal {round(n_mean,1)} kg/ha for {crop}.")
     elif n_val > n_mean + 10:
-        tips.append(f"Reduce nitrogen input — current {round(n_val,1)} kg/ha "
-                    f"exceeds the optimal ~{round(n_mean,1)} kg/ha for {crop}.")
+        tips.append(f"Reduce nitrogen input. Current level ({round(n_val,1)} kg/ha) "
+                    f"exceeds the optimal {round(n_mean,1)} kg/ha for {crop}.")
 
     if p_val < p_mean - 8:
-        tips.append(f"Boost phosphorus with a phosphate fertilizer (e.g. DAP or SSP) "
-                    f"— current {round(p_val,1)} kg/ha is below optimal ~{round(p_mean,1)} kg/ha.")
+        tips.append(f"Boost phosphorus with a phosphate fertilizer (e.g. DAP or SSP). "
+                    f"Current level is {round(p_val,1)} kg/ha, below the optimal {round(p_mean,1)} kg/ha.")
     elif p_val > p_mean + 8:
-        tips.append(f"Reduce phosphorus input — current {round(p_val,1)} kg/ha "
-                    f"exceeds optimal ~{round(p_mean,1)} kg/ha.")
+        tips.append(f"Reduce phosphorus input. Current level ({round(p_val,1)} kg/ha) "
+                    f"exceeds the optimal {round(p_mean,1)} kg/ha.")
 
     if k_val < k_mean - 8:
         tips.append(f"Apply a potash supplement (e.g. muriate of potash) to raise "
-                    f"potassium from {round(k_val,1)} to ~{round(k_mean,1)} kg/ha.")
+                    f"potassium from {round(k_val,1)} kg/ha to the optimal {round(k_mean,1)} kg/ha.")
     elif k_val > k_mean + 8:
-        tips.append(f"Reduce potassium application — current {round(k_val,1)} kg/ha "
-                    f"is above optimal ~{round(k_mean,1)} kg/ha.")
+        tips.append(f"Reduce potassium application. Current level ({round(k_val,1)} kg/ha) "
+                    f"is above the optimal {round(k_mean,1)} kg/ha.")
 
     if ph_val < ph_mean - 0.5:
         tips.append(f"Soil pH {round(ph_val,2)} is below the preferred "
@@ -668,36 +668,35 @@ def predict():
 
         # Build the pH tip and advice only when pH is outside the acceptable band
         if ph_val < 5.5:
-            # Acidic soil — apply a base (alkaline substance) to raise pH
+            # Acidic soil, apply a base (alkaline substance) to raise pH
             ph_tip = (
-                f"Soil pH is {round(ph_val, 2)}, which is acidic (below 5.5). "
+                f"Soil pH is {round(ph_val, 2)} (acidic, below 5.5). "
                 "Apply agricultural lime (calcium carbonate, a basic compound) to neutralise "
-                "the acidity and raise pH into the ideal range of 5.5 – 7.0."
+                "the acidity and raise pH into the ideal range (5.5 to 7.0)."
             )
             ph_advice = (
                 f"Soil pH of {round(ph_val, 2)} is too acidic for most crops. "
-                "Apply agricultural lime (calcium carbonate) to raise pH — lime is alkaline and "
-                "neutralises excess soil acids, making nutrients more available for plant uptake."
+                "Apply agricultural lime (calcium carbonate) to raise pH. "
+                "Lime is alkaline and neutralises excess soil acids, making nutrients more available for plant uptake."
             )
         elif ph_val > 7.0:
-            # Alkaline soil — apply an acid to lower pH
+            # Alkaline soil, apply an acid to lower pH
             ph_tip = (
-                f"Soil pH is {round(ph_val, 2)}, which is alkaline (above 7.0). "
-                "Apply elemental sulfur or an acidifying fertilizer (e.g. ammonium sulfate) to "
-                "lower pH into the ideal range of 5.5 – 7.0."
+                f"Soil pH is {round(ph_val, 2)} (alkaline, above 7.0). "
+                "Apply elemental sulfur (an acidifying agent, e.g. ammonium sulfate) to "
+                "lower pH into the ideal range (5.5 to 7.0)."
             )
             ph_advice = (
                 f"Soil pH of {round(ph_val, 2)} is too alkaline for most crops. "
                 "Apply elemental sulfur, which is oxidised by soil bacteria into sulfuric acid, "
-                "gradually lowering pH to the preferred range of 5.5 – 7.0."
+                "gradually lowering pH to the preferred range (5.5 to 7.0)."
             )
         else:
             ph_tip   = None
             ph_advice = None
 
         general_tips = [
-            "Apply a balanced NPK fertilizer (e.g. 15-15-15) to build up soil nutrient levels "
-            "before the next planting season.",
+            "Apply a balanced NPK fertilizer (e.g. 15-15-15) to build up soil nutrient levels before the next planting season.",
             "Conduct a full soil test to identify which nutrients are most deficient.",
             "Improve soil organic matter by incorporating compost or well-rotted manure.",
             "Ensure proper drainage to avoid waterlogging, which limits nutrient uptake.",

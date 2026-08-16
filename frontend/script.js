@@ -1597,16 +1597,40 @@ function showInputWarning(title, msg) {
   });
 }
 
+// Human-readable label for each field, used in validation messages
+const FIELD_LABELS = {
+  N: "Nitrogen (N)",
+  P: "Phosphorus (P)",
+  K: "Potassium (K)",
+  temperature: "Temperature",
+  humidity: "Humidity",
+  ph: "Soil pH",
+  rainfall: "Rainfall",
+};
+
 async function analyze() {
   const btn = document.getElementById("analyze-btn");
 
+  // ── Guard: all fields must be filled ────────────────────────────────────
+  for (const f of FIELDS) {
+    const el = document.getElementById("in-" + f);
+    if (!el || el.value.trim() === "") {
+      await showInputWarning(
+        "Missing Input",
+        `Please enter a value for "${FIELD_LABELS[f] || f}" before running the analysis.`
+      );
+      el && el.focus();
+      return;
+    }
+  }
+
   // ── Validate pH ──────────────────────────────────────────────────────────
   const phEl = document.getElementById("in-ph");
-  const phVal = phEl.value === "" ? null : parseFloat(phEl.value);
-  if (phVal !== null && (phVal < 4 || phVal > 8)) {
+  const phVal = parseFloat(phEl.value);
+  if (phVal < 4 || phVal > 8) {
     await showInputWarning(
       "Soil pH Out of Range",
-      `The entered pH value (${phVal}) is outside the valid range of 4 – 8. ` +
+      `The entered pH value (${phVal}) is outside the valid range (4 to 8). ` +
       "Analysis cannot proceed. Please correct the soil pH before running the analysis."
     );
     phEl.focus();
@@ -1615,11 +1639,11 @@ async function analyze() {
 
   // ── Validate Temperature ─────────────────────────────────────────────────
   const tempEl = document.getElementById("in-temperature");
-  const tempVal = tempEl.value === "" ? null : parseFloat(tempEl.value);
-  if (tempVal !== null && (tempVal < 15 || tempVal > 50)) {
+  const tempVal = parseFloat(tempEl.value);
+  if (tempVal < 15 || tempVal > 50) {
     await showInputWarning(
       "Temperature Out of Range",
-      `The entered temperature (${tempVal} °C) is outside the valid range of 15 – 50 °C. ` +
+      `The entered temperature (${tempVal} °C) is outside the valid range (15 to 50 °C). ` +
       "Analysis cannot proceed. Please correct the temperature value before running the analysis."
     );
     tempEl.focus();
