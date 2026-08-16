@@ -27,8 +27,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 FEATURES = ["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
 OUTPUT_DIR = "outputs"
-DATA_PATH = "Crop_recommendation_filtered.csv"
-CONF_THRESHOLD = 0.30  # below this, blend in nearest-neighbour "fuzzy" matches
+DATA_PATH = "Crop_recommendation_filtered4.csv"
+CONF_THRESHOLD   = 0.30   # below this, blend in nearest-neighbour "fuzzy" matches
+MIN_SLOT_CONF    = 0.08   # individual recommendation slots below this are suppressed
+NPK_TOLERANCE    = 5.0    # ±5 kg/ha buffer applied to per-crop N/P/K training range
 DB_PATH = "users.db"
 SECRET_KEY_PATH = os.path.join(OUTPUT_DIR, ".flask_secret")
 
@@ -166,6 +168,7 @@ model = joblib.load(os.path.join(OUTPUT_DIR, "crop_prediction_model.pkl"))
 encoder = joblib.load(os.path.join(OUTPUT_DIR, "label_encoder.pkl"))
 scaler = joblib.load(os.path.join(OUTPUT_DIR, "scaler.pkl"))
 feature_ranges = joblib.load(os.path.join(OUTPUT_DIR, "feature_ranges.pkl"))
+crop_profiles = joblib.load(os.path.join(OUTPUT_DIR, "crop_profiles.pkl"))
 
 df = pd.read_csv(DATA_PATH)
 _df_feat = df[FEATURES].values.astype(float)
@@ -176,6 +179,83 @@ _col_ranges = np.where(_col_maxs - _col_mins == 0, 1.0, _col_maxs - _col_mins)
 
 # Crop labels known to the dataset, used to validate `explain_crop` input.
 _crop_means = df.groupby("label")[FEATURES].mean()
+
+
+def _npk_in_tolerance(crop: str, filled: dict) -> bool:
+    """Return True if the filled N, P and K values all fall within the crop's
+    training-data range extended by ±NPK_TOLERANCE on each side."""
+    if crop not in crop_profiles:
+        return True  # unknown crop — let model handle it
+    prof = crop_profiles[crop]
+    for feat in ("N", "P", "K"):
+        lo = prof[feat]["min"] - NPK_TOLERANCE
+        hi = prof[feat]["max"] + NPK_TOLERANCE
+        if not (lo <= filled[feat] <= hi):
+            return False
+    return True
+
+
+def _improvement_tips(crop: str, filled: dict) -> list[str]:
+    """Return a list of actionable improvement tips comparing the user's filled
+    values to the crop profile means. Empty list when all values are good."""
+    if crop not in crop_profiles:
+        return []
+    prof = crop_profiles[crop]
+    tips = []
+    n_val, n_mean = filled["N"], prof["N"]["mean"]
+    p_val, p_mean = filled["P"], prof["P"]["mean"]
+    k_val, k_mean = filled["K"], prof["K"]["mean"]
+    ph_val, ph_mean = filled["ph"], prof["ph"]["mean"]
+    temp_val, temp_mean = filled["temperature"], prof["temperature"]["mean"]
+    rain_val, rain_mean = filled["rainfall"], prof["rainfall"]["mean"]
+
+    if n_val < n_mean - 10:
+        tips.append(f"Increase nitrogen by applying a nitrogen-rich fertilizer "
+                    f"(e.g. urea or ammonium nitrate) — current {round(n_val,1)} kg/ha "
+                    f"is below the optimal ~{round(n_mean,1)} kg/ha for {crop}.")
+    elif n_val > n_mean + 10:
+        tips.append(f"Reduce nitrogen input — current {round(n_val,1)} kg/ha "
+                    f"exceeds the optimal ~{round(n_mean,1)} kg/ha for {crop}.")
+
+    if p_val < p_mean - 8:
+        tips.append(f"Boost phosphorus with a phosphate fertilizer (e.g. DAP or SSP) "
+                    f"— current {round(p_val,1)} kg/ha is below optimal ~{round(p_mean,1)} kg/ha.")
+    elif p_val > p_mean + 8:
+        tips.append(f"Reduce phosphorus input — current {round(p_val,1)} kg/ha "
+                    f"exceeds optimal ~{round(p_mean,1)} kg/ha.")
+
+    if k_val < k_mean - 8:
+        tips.append(f"Apply a potash supplement (e.g. muriate of potash) to raise "
+                    f"potassium from {round(k_val,1)} to ~{round(k_mean,1)} kg/ha.")
+    elif k_val > k_mean + 8:
+        tips.append(f"Reduce potassium application — current {round(k_val,1)} kg/ha "
+                    f"is above optimal ~{round(k_mean,1)} kg/ha.")
+
+    if ph_val < ph_mean - 0.5:
+        tips.append(f"Soil pH {round(ph_val,2)} is below the preferred "
+                    f"~{round(ph_mean,2)} for {crop}. Apply agricultural lime "
+                    f"(calcium carbonate) to raise pH.")
+    elif ph_val > ph_mean + 0.5:
+        tips.append(f"Soil pH {round(ph_val,2)} is above the preferred "
+                    f"~{round(ph_mean,2)} for {crop}. Apply elemental sulfur "
+                    f"or acidifying fertilizer to lower pH.")
+
+    if abs(temp_val - temp_mean) > 4:
+        direction = "warmer" if temp_val < temp_mean else "cooler"
+        tips.append(f"Average temperature {round(temp_val,1)} °C differs from the "
+                    f"ideal ~{round(temp_mean,1)} °C for {crop}. "
+                    f"Consider shade structures or windbreaks for a {direction} microclimate.")
+
+    if rain_val < rain_mean * 0.6:
+        tips.append(f"Rainfall {round(rain_val,1)} mm is well below the "
+                    f"~{round(rain_mean,1)} mm preferred by {crop}. "
+                    f"Supplement with drip or furrow irrigation.")
+    elif rain_val > rain_mean * 1.5:
+        tips.append(f"Rainfall {round(rain_val,1)} mm significantly exceeds "
+                    f"the ~{round(rain_mean,1)} mm preferred by {crop}. "
+                    f"Ensure good drainage to prevent waterlogging.")
+
+    return tips
 
 _RANK_VERDICTS = {
     0: "These values closely match typical {crop} conditions, hence {crop} is the best crop to grow.",
@@ -206,10 +286,21 @@ def explain_crop(crop: str, filled: dict, rank: int):
 def predict_crop_fuzzy(values: dict):
     """
     values: dict with keys from FEATURES, any of which may be None/missing.
-    Returns (top3 list of {crop, confidence}, used_fuzzy: bool)
+    Returns (top3 list of {crop, confidence}, used_fuzzy: bool, no_match: bool)
+
+    no_match is True when inputs are all near-zero or when no crop survives the
+    NPK tolerance check and confidence threshold — caller should return the
+    "no matching soil" response instead of crop recommendations.
     """
     raw = np.array([values.get(f) for f in FEATURES], dtype=float)
     known_mask = ~np.isnan(raw)
+
+    # ── Guard: all-zero / near-zero NPK means no soil data provided ───────
+    n_val = values.get("N") or 0
+    p_val = values.get("P") or 0
+    k_val = values.get("K") or 0
+    if n_val < 1 and p_val < 1 and k_val < 1:
+        return [], False, True  # no_match
 
     filled = raw.copy()
     used_fuzzy = False
@@ -222,6 +313,8 @@ def predict_crop_fuzzy(values: dict):
         dist = np.sqrt(((norm_known - norm_query) ** 2).sum(axis=1))
         nearest_idx = np.argmin(dist)
         filled[~known_mask] = _df_feat[nearest_idx, ~known_mask]
+
+    filled_dict = {f: float(filled[i]) for i, f in enumerate(FEATURES)}
 
     scaled = scaler.transform(pd.DataFrame([filled], columns=FEATURES))
     proba = model.predict_proba(scaled)[0]
@@ -247,11 +340,19 @@ def predict_crop_fuzzy(values: dict):
         ranked = [(encoder.classes_[i], float(proba[i])) for i in top_idx]
 
     total = sum(max(c, 0) for _, c in ranked) or 1.0
-    top3 = [
-        {"crop": crop, "confidence": round(float(conf) / total, 4) if used_fuzzy else round(float(conf), 4)}
-        for crop, conf in ranked
-    ]
-    return top3, used_fuzzy
+
+    # ── Filter: remove slots below confidence threshold or outside NPK ±5 ──
+    top3 = []
+    for crop, conf in ranked:
+        conf_norm = round(float(conf) / total, 4) if used_fuzzy else round(float(conf), 4)
+        if conf_norm < MIN_SLOT_CONF:
+            continue
+        if not _npk_in_tolerance(crop, filled_dict):
+            continue
+        top3.append({"crop": crop, "confidence": conf_norm})
+
+    no_match = len(top3) == 0
+    return top3, used_fuzzy, no_match
 
 
 def normalize_pct(feature: str, value: float) -> int:
@@ -525,11 +626,13 @@ def predict():
         v = body.get(f, None)
         values[f] = None if v in (None, "") else float(v)
 
-    top3, used_fuzzy = predict_crop_fuzzy(values)
+    top3, used_fuzzy, no_match = predict_crop_fuzzy(values)
 
-    filled = dict(values)
+    # ── Resolve filled values (for readings + tips), filling missing with
+    # nearest-neighbour imputation (same logic as predict_crop_fuzzy). ──────
+    filled = {f: values[f] for f in FEATURES}
+    raw = np.array([values.get(f) for f in FEATURES], dtype=float)
     if any(v is None for v in values.values()):
-        raw = np.array([values.get(f) for f in FEATURES], dtype=float)
         known_mask = ~np.isnan(raw)
         norm_known = (_df_feat[:, known_mask] - _col_mins[known_mask]) / _col_ranges[known_mask]
         norm_query = (raw[known_mask] - _col_mins[known_mask]) / _col_ranges[known_mask]
@@ -541,28 +644,74 @@ def predict():
 
     n_pct, p_pct, k_pct = npk_shares(filled["N"], filled["P"], filled["K"])
 
+    readings = {
+        "N": {"value": round(filled["N"], 1), "percent": n_pct},
+        "P": {"value": round(filled["P"], 1), "percent": p_pct},
+        "K": {"value": round(filled["K"], 1), "percent": k_pct},
+        "ph": {"value": round(filled["ph"], 2), "label": ph_label(filled["ph"])},
+        "humidity": {"value": round(filled["humidity"], 1), "label": moisture_label(filled["humidity"])},
+        "temperature": {
+            "value": round(filled["temperature"], 1),
+            "percent": normalize_pct("temperature", filled["temperature"]),
+            "label": temperature_label(filled["temperature"]),
+        },
+        "rainfall": {
+            "value": round(filled["rainfall"], 1),
+            "percent": normalize_pct("rainfall", filled["rainfall"]),
+            "label": rainfall_label(filled["rainfall"]),
+        },
+    }
+
+    # ── No-match path ─────────────────────────────────────────────────────
+    if no_match:
+        ph_val  = filled["ph"]
+        ph_mean = sum(p["ph"]["mean"] for p in crop_profiles.values()) / max(len(crop_profiles), 1)
+
+        general_tips = [
+            "Apply a balanced NPK fertilizer (e.g. 15-15-15) to build up soil nutrient levels "
+            "before the next planting season.",
+            "Conduct a full soil test to identify which nutrients are most deficient.",
+            f"Current soil pH is {round(ph_val, 2)} — the ideal range for most crops is 5.5 – 7.0. "
+            + (
+                "Apply agricultural lime (calcium carbonate) to raise pH."
+                if ph_val < 5.5
+                else "Apply elemental sulfur or an acidifying fertilizer to lower pH."
+                if ph_val > 7.0
+                else "pH is within the general acceptable range, but verify for your target crop."
+            ),
+            "Improve soil organic matter by incorporating compost or well-rotted manure.",
+            "Ensure proper drainage to avoid waterlogging, which limits nutrient uptake.",
+        ]
+
+        return jsonify({
+            "no_match": True,
+            "used_fuzzy": used_fuzzy,
+            "readings": readings,
+            "message": (
+                "No crop matches this soil profile. The current nutrient levels and soil "
+                "characteristics do not fall within the acceptable range for any of the "
+                "recommended crops."
+            ),
+            "advice": (
+                "Consider applying fertilizer to improve soil nutrient levels and neutralising "
+                f"the soil pH to the preferred standard (ideally 5.5 – 7.0, currently {round(ph_val, 2)}). "
+                "Add lime to raise pH (too acidic) or sulfur to lower pH (too alkaline) before sowing."
+            ),
+            "improvement_tips": general_tips,
+        })
+
+    # ── Normal path ───────────────────────────────────────────────────────
+    top_crop = top3[0]["crop"] if top3 else None
+    improvement_tips = _improvement_tips(top_crop, filled) if top_crop else []
+
     response = {
+        "no_match": False,
         "recommendations": [
             {**rec, "reasons": explain_crop(rec["crop"], filled, rank)} for rank, rec in enumerate(top3)
         ],
         "used_fuzzy": used_fuzzy,
-        "readings": {
-            "N": {"value": round(filled["N"], 1), "percent": n_pct},
-            "P": {"value": round(filled["P"], 1), "percent": p_pct},
-            "K": {"value": round(filled["K"], 1), "percent": k_pct},
-            "ph": {"value": round(filled["ph"], 2), "label": ph_label(filled["ph"])},
-            "humidity": {"value": round(filled["humidity"], 1), "label": moisture_label(filled["humidity"])},
-            "temperature": {
-                "value": round(filled["temperature"], 1),
-                "percent": normalize_pct("temperature", filled["temperature"]),
-                "label": temperature_label(filled["temperature"]),
-            },
-            "rainfall": {
-                "value": round(filled["rainfall"], 1),
-                "percent": normalize_pct("rainfall", filled["rainfall"]),
-                "label": rainfall_label(filled["rainfall"]),
-            },
-        },
+        "readings": readings,
+        "improvement_tips": improvement_tips,
     }
     return jsonify(response)
 

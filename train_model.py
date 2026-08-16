@@ -15,7 +15,7 @@ from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from xgboost import XGBClassifier
 
-DATA_PATH = "Crop_recommendation_filtered.csv"
+DATA_PATH = "Crop_recommendation_filtered4.csv"
 OUTPUT_DIR = "outputs"
 FEATURES = ["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
 TARGET = "label"
@@ -95,7 +95,21 @@ def main():
     }
     joblib.dump(feature_ranges, os.path.join(OUTPUT_DIR, "feature_ranges.pkl"))
 
-    print(f"\nSaved model, encoder, scaler, and feature ranges to '{OUTPUT_DIR}/'")
+    # Per-crop acceptable ranges (min/max observed in training data) + means.
+    # Used at prediction time to enforce ±5 tolerance and suggest adjustments.
+    crop_profiles = {}
+    for crop, grp in df.groupby(TARGET):
+        crop_profiles[crop] = {
+            feat: {
+                "min":  float(grp[feat].min()),
+                "max":  float(grp[feat].max()),
+                "mean": float(grp[feat].mean()),
+            }
+            for feat in FEATURES
+        }
+    joblib.dump(crop_profiles, os.path.join(OUTPUT_DIR, "crop_profiles.pkl"))
+
+    print(f"\nSaved model, encoder, scaler, feature ranges, and crop profiles to '{OUTPUT_DIR}/'")
 
 
 if __name__ == "__main__":

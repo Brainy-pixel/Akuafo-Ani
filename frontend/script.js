@@ -1241,9 +1241,28 @@ function renderResult(data) {
     ? getComputedStyle(document.documentElement).getPropertyValue("--green-light")
     : getComputedStyle(document.documentElement).getPropertyValue("--red");
 
-  // Recommendations
+  // ── No-match path ─────────────────────────────────────────────────────────
   const box = document.getElementById("recommendations");
   box.innerHTML = "";
+
+  if (data.no_match) {
+    document.getElementById("recommended-crops-header").style.display = "";
+    document.getElementById("fuzzy-note").style.display = "none";
+    box.innerHTML = `
+      <div class="no-match-card">
+        <div class="no-match-icon">🌱</div>
+        <div class="no-match-title">No Matching Crop Found</div>
+        <div class="no-match-msg">${data.message}</div>
+        <div class="no-match-advice">${data.advice}</div>
+      </div>
+    `;
+    renderNoMatchDashboard();
+    renderIdeas(data);
+    renderFields(data);
+    return;
+  }
+
+  // ── Normal path: crop cards ───────────────────────────────────────────────
   data.recommendations.forEach((rec, i) => {
     const pct = Math.round(rec.confidence * 100);
     const narrative = buildWhyNarrative(rec.crop, i);
@@ -1301,6 +1320,26 @@ function renderResult(data) {
   renderTopPick(data);
   renderIdeas(data);
   renderFields(data);
+}
+
+function renderNoMatchDashboard() {
+  updateWelcomeHeading();
+  document.getElementById("top-pick-placeholder").style.display = "none";
+  document.getElementById("top-pick-overlay").style.display = "none";
+  const fgImg = document.getElementById("top-pick-img");
+  fgImg.style.display = "none";
+  // Show a soil advisory message in the why-card slot
+  const whyCard = document.getElementById("why-card");
+  const whyList = document.getElementById("why-list");
+  const whyToggle = document.getElementById("why-toggle");
+  whyList.innerHTML = `<p>No crop matches the current soil profile. Consider improving soil fertility through fertilizer application and pH correction before running another analysis.</p>`;
+  whyList.style.display = "none";
+  whyToggle.setAttribute("aria-expanded", "false");
+  whyToggle.classList.remove("open");
+  whyCard.style.display = "block";
+  currentTopSpeechText   = ["No crop recommendation available.", "The soil parameters do not match any crop in the database. Please improve soil conditions and try again."];
+  currentTopSpeechTextTw = null;
+  currentTopNarrativeTwi = null;
 }
 
 function renderTopPick(data) {
@@ -1405,6 +1444,28 @@ function renderIdeas(data) {
   const r = data.readings;
   const tips = [];
 
+  // ── No-match mode: show general soil improvement advice ─────────────────
+  if (data.no_match) {
+    const noMatchTips = data.improvement_tips || [];
+    const allTips = [
+      ["🌱", "No matching crop", data.message || "The soil profile does not match any crop in the database."],
+      ...noMatchTips.map((tip) => ["💡", "Soil Improvement", tip]),
+    ];
+    document.getElementById("ideas-box").innerHTML = allTips.map(([icon, title, text]) => `
+      <div class="idea-item idea-tip-model">
+        <div class="idea-icon">${icon}</div>
+        <div>
+          <div class="idea-title">${title}</div>
+          <div class="idea-text">${text}</div>
+        </div>
+      </div>
+    `).join("");
+    currentIdeasSpeechText = allTips.map(([, title, text]) => `${title}. ${text}`);
+    document.getElementById("ideas-listen-btn").style.display = "flex";
+    return;
+  }
+
+  // ── Normal mode ──────────────────────────────────────────────────────────
   if (r.N.percent < 30) {
     tips.push(["🟢", "Nitrogen is low", "Consider a nitrogen-rich fertilizer or compost to support leaf growth."]);
   } else if (r.N.percent > 75) {
@@ -1441,6 +1502,17 @@ function renderIdeas(data) {
 
   const top = data.recommendations[0];
 
+  // ── Model-derived per-crop improvement tips ───────────────────────────
+  const modelTips = (data.improvement_tips || []).map((tip) =>
+    `<div class="idea-item idea-tip-model">
+      <div class="idea-icon">💡</div>
+      <div>
+        <div class="idea-title">For optimum ${top.crop} cultivation</div>
+        <div class="idea-text">${tip}</div>
+      </div>
+    </div>`
+  ).join("");
+
   document.getElementById("ideas-box").innerHTML = tips.map(([icon, title, text]) => `
     <div class="idea-item">
       <div class="idea-icon">${icon}</div>
@@ -1449,7 +1521,7 @@ function renderIdeas(data) {
         <div class="idea-text">${text}</div>
       </div>
     </div>
-  `).join("") + `
+  `).join("") + modelTips + `
     <div class="idea-item idea-crop">
       <img class="idea-crop-img" src="${cropImage(top.crop)}" alt="${top.crop}">
       <div>
@@ -1459,7 +1531,9 @@ function renderIdeas(data) {
     </div>
   `;
 
+  const modelTipTexts = (data.improvement_tips || []).map((tip) => `For optimum ${top.crop} cultivation. ${tip}`);
   currentIdeasSpeechText = tips.map(([, title, text]) => `${title}. ${text}`)
+    .concat(modelTipTexts)
     .concat(`Best fit: ${top.crop}, matching with ${Math.round(top.confidence * 100)} percent confidence.`);
   document.getElementById("ideas-listen-btn").style.display = "flex";
 }
@@ -1488,8 +1562,52 @@ function renderFields(data) {
   `).join("");
 }
 
+// ── Input validation warning modal ─────────────────────────────────────────
+function showInputWarning(title, msg) {
+  return new Promise((resolve) => {
+    document.getElementById("input-warning-title").textContent = title;
+    document.getElementById("input-warning-msg").textContent = msg;
+    const modal = document.getElementById("input-warning-modal");
+    modal.classList.remove("hidden");
+    const ok = document.getElementById("input-warning-ok");
+    function dismiss() {
+      modal.classList.add("hidden");
+      ok.removeEventListener("click", dismiss);
+      resolve();
+    }
+    ok.addEventListener("click", dismiss);
+  });
+}
+
 async function analyze() {
   const btn = document.getElementById("analyze-btn");
+
+  // ── Validate pH ──────────────────────────────────────────────────────────
+  const phEl = document.getElementById("in-ph");
+  const phVal = phEl.value === "" ? null : parseFloat(phEl.value);
+  if (phVal !== null && (phVal < 4 || phVal > 8)) {
+    await showInputWarning(
+      "Soil pH Out of Range",
+      `The entered pH value (${phVal}) is outside the valid range of 4 – 8. ` +
+      "Analysis cannot proceed. Please correct the soil pH before running the analysis."
+    );
+    phEl.focus();
+    return;
+  }
+
+  // ── Validate Temperature ─────────────────────────────────────────────────
+  const tempEl = document.getElementById("in-temperature");
+  const tempVal = tempEl.value === "" ? null : parseFloat(tempEl.value);
+  if (tempVal !== null && (tempVal < 15 || tempVal > 50)) {
+    await showInputWarning(
+      "Temperature Out of Range",
+      `The entered temperature (${tempVal} °C) is outside the valid range of 15 – 50 °C. ` +
+      "Analysis cannot proceed. Please correct the temperature value before running the analysis."
+    );
+    tempEl.focus();
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = t("crops.analyzing");
   try {

@@ -905,6 +905,88 @@ h1, h2, h3, h4,
 .tts-pick-btn:hover,
 .tts-pick-btn:focus-visible { background: var(--card-alt); outline: none; }
 
+/* ── Input Validation Warning Modal ─────────────────────────────────────── */
+.input-warning-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, 0.52);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.input-warning-overlay.hidden { display: none; }
+.input-warning-box {
+  background: var(--card-surface);
+  border-radius: 20px;
+  padding: 32px 28px 28px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+}
+.input-warning-icon { font-size: 2.4rem; margin-bottom: 12px; }
+.input-warning-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+.input-warning-msg {
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0 0 22px;
+}
+.input-warning-ok {
+  background: var(--forest);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 28px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+.input-warning-ok:hover { opacity: 0.88; }
+
+/* ── No-match result card ────────────────────────────────────────────────── */
+.no-match-card {
+  background: var(--card-surface);
+  border-radius: 18px;
+  padding: 28px 24px;
+  margin: 8px 0 16px;
+  text-align: center;
+}
+.no-match-icon { font-size: 2.8rem; margin-bottom: 12px; }
+.no-match-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+.no-match-msg {
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+.no-match-advice {
+  font-size: 0.92rem;
+  color: var(--text);
+  background: var(--card-alt-surface);
+  border-radius: 12px;
+  padding: 14px 16px;
+  line-height: 1.6;
+  text-align: left;
+}
+
+/* ── Per-crop improvement tips in Ideas ─────────────────────────────────── */
+.idea-item.idea-tip-model {
+  border-left: 3px solid var(--forest);
+}
 
 /* ── Profile view: not-logged-in auth section ─────────────────────────────
    Replaces the old full-screen dark overlay login/signup panels.
