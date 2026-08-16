@@ -1250,13 +1250,17 @@ function renderResult(data) {
     document.getElementById("fuzzy-note").style.display = "none";
     box.innerHTML = `
       <div class="no-match-card">
-        <div class="no-match-icon">🌱</div>
-        <div class="no-match-title">No Matching Crop Found</div>
-        <div class="no-match-msg">${data.message}</div>
-        <div class="no-match-advice">${data.advice}</div>
+        <div class="no-match-img-wrap">
+          <img class="no-match-img" src="images/no-match.jpg" alt="No matching crop">
+        </div>
+        <div class="no-match-body">
+          <div class="no-match-reason-heading">Reason for this</div>
+          <p class="no-match-para">${data.message}</p>
+          <p class="no-match-para">${data.advice}</p>
+        </div>
       </div>
     `;
-    renderNoMatchDashboard();
+    renderNoMatchDashboard(data);
     renderIdeas(data);
     renderFields(data);
     return;
@@ -1322,22 +1326,36 @@ function renderResult(data) {
   renderFields(data);
 }
 
-function renderNoMatchDashboard() {
+function renderNoMatchDashboard(data) {
   updateWelcomeHeading();
   document.getElementById("top-pick-placeholder").style.display = "none";
   document.getElementById("top-pick-overlay").style.display = "none";
+
+  // Show the no-match sign image in place of the crop photo
   const fgImg = document.getElementById("top-pick-img");
-  fgImg.style.display = "none";
-  // Show a soil advisory message in the why-card slot
+  fgImg.src = "images/no-match.jpg";
+  fgImg.alt = "No matching crop";
+  fgImg.style.display = "block";
+  fgImg.style.objectFit = "cover";
+
+  // "Reason for this" in the why-card with two paragraphs
   const whyCard = document.getElementById("why-card");
   const whyList = document.getElementById("why-list");
   const whyToggle = document.getElementById("why-toggle");
-  whyList.innerHTML = `<p>No crop matches the current soil profile. Consider improving soil fertility through fertilizer application and pH correction before running another analysis.</p>`;
-  whyList.style.display = "none";
-  whyToggle.setAttribute("aria-expanded", "false");
-  whyToggle.classList.remove("open");
+  const whyToggleSpan = whyToggle.querySelector("span[data-i18n]") || whyToggle.querySelector("span");
+  if (whyToggleSpan) whyToggleSpan.textContent = "Reason for this";
+
+  const msg    = (data && data.message) ? data.message : "No crop matches the current soil profile.";
+  const advice = (data && data.advice)  ? data.advice  : "Consider applying fertilizer to improve nutrient levels and correct soil pH before the next analysis.";
+  whyList.innerHTML = `<p>${msg}</p><p style="margin-top:10px">${advice}</p>`;
+  // Start expanded so the reason is immediately visible
+  whyList.style.display = "flex";
+  whyList.style.flexDirection = "column";
+  whyToggle.setAttribute("aria-expanded", "true");
+  whyToggle.classList.add("open");
   whyCard.style.display = "block";
-  currentTopSpeechText   = ["No crop recommendation available.", "The soil parameters do not match any crop in the database. Please improve soil conditions and try again."];
+
+  currentTopSpeechText   = ["No crop recommendation available.", msg, advice];
   currentTopSpeechTextTw = null;
   currentTopNarrativeTwi = null;
 }
