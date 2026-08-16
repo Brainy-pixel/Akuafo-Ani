@@ -30,7 +30,7 @@ OUTPUT_DIR = "outputs"
 DATA_PATH = "Crop_recommendation_filtered4.csv"
 CONF_THRESHOLD   = 0.30   # below this, blend in nearest-neighbour "fuzzy" matches
 MIN_SLOT_CONF    = 0.08   # individual recommendation slots below this are suppressed
-NPK_TOLERANCE    = 5.0    # ±5 kg/ha buffer applied to per-crop N/P/K training range
+NPK_TOLERANCE    = 10.0   # ±10 kg/ha buffer applied to per-crop N/P/K training range
 DB_PATH = "users.db"
 SECRET_KEY_PATH = os.path.join(OUTPUT_DIR, ".flask_secret")
 
