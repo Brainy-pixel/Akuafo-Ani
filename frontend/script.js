@@ -58,9 +58,9 @@ const TRANSLATIONS = {
     "crops.recommendedCrops": "Recommended Crops",
     "crops.fuzzyNote": "Some values were estimated from similar soil samples (fuzzy match).",
     "crops.soilSampleInput": "Soil Sample Input",
-    "crops.nitrogenLabel": "Nitrogen N (kg/ha)",
-    "crops.phosphorusLabel": "Phosphorus P (kg/ha)",
-    "crops.potassiumLabel": "Potassium K (kg/ha)",
+    "crops.nitrogenLabel": "Nitrogen N (mg/kg)",
+    "crops.phosphorusLabel": "Phosphorus P (mg/kg)",
+    "crops.potassiumLabel": "Potassium K (mg/kg)",
     "crops.temperatureLabel": "Temperature (°C)",
     "crops.humidityLabel": "Humidity (%)",
     "crops.phLabel": "Soil pH",
@@ -162,9 +162,9 @@ const TRANSLATIONS = {
     "crops.recommendedCrops": "Nnɔbae a Yɛkamfo",
     "crops.fuzzyNote": "Wɔkyerɛɛ nsɛm bi fi asase nhwɛso a ɛte saa ara mu (fuzzy match).",
     "crops.soilSampleInput": "Asase Nhwɛso Nsɛm",
-    "crops.nitrogenLabel": "Nitrogen N (kg/ha)",
-    "crops.phosphorusLabel": "Phosphorus P (kg/ha)",
-    "crops.potassiumLabel": "Potassium K (kg/ha)",
+    "crops.nitrogenLabel": "Nitrogen N (mg/kg)",
+    "crops.phosphorusLabel": "Phosphorus P (mg/kg)",
+    "crops.potassiumLabel": "Potassium K (mg/kg)",
     "crops.temperatureLabel": "Ɔhyew (°C)",
     "crops.humidityLabel": "Fɔntɔm (%)",
     "crops.phLabel": "Asase pH",
@@ -771,7 +771,7 @@ function cropSpeechTextTwi(rec, rank = 0) {
 
 function speechFriendly(line) {
   return line
-    .replace(/kg\/ha/gi, "kilograms per hectare")
+    .replace(/mg\/kg/gi, "milligrams per kilogram")
     .replace(/°C/g, "degree Celsius");
 }
 
@@ -1566,9 +1566,9 @@ document.getElementById("ideas-listen-btn").addEventListener("click", () => {
 function renderFields(data) {
   const r = data.readings;
   const rows = [
-    [`${t("dashboard.nitrogen")} (N)`, `${r.N.value} kg/ha`],
-    [`${t("dashboard.phosphorus")} (P)`, `${r.P.value} kg/ha`],
-    [`${t("dashboard.potassium")} (K)`, `${r.K.value} kg/ha`],
+    [`${t("dashboard.nitrogen")} (N)`, `${r.N.value} mg/kg`],
+    [`${t("dashboard.phosphorus")} (P)`, `${r.P.value} mg/kg`],
+    [`${t("dashboard.potassium")} (K)`, `${r.K.value} mg/kg`],
     [t("dashboard.soilPh"), `${r.ph.value} (${r.ph.label})`],
     [t("dashboard.humidity"), `${r.humidity.value}% (${r.humidity.label})`],
     [t("crops.temperatureLabel").replace(" (°C)", ""), `${r.temperature.value} °C`],

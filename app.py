@@ -30,14 +30,14 @@ OUTPUT_DIR = "outputs"
 DATA_PATH = "Crop_recommendation_filtered4.csv"
 CONF_THRESHOLD   = 0.30   # below this, blend in nearest-neighbour "fuzzy" matches
 MIN_SLOT_CONF    = 0.08   # individual recommendation slots below this are suppressed
-NPK_TOLERANCE    = 10.0   # ±10 kg/ha buffer applied to per-crop N/P/K training range
+NPK_TOLERANCE    = 10.0   # ±10 mg/kg buffer applied to per-crop N/P/K training range
 DB_PATH = "users.db"
 SECRET_KEY_PATH = os.path.join(OUTPUT_DIR, ".flask_secret")
 
 FEATURE_META = {
-    "N": {"label": "Nitrogen", "unit": "kg/ha"},
-    "P": {"label": "Phosphorus", "unit": "kg/ha"},
-    "K": {"label": "Potassium", "unit": "kg/ha"},
+    "N": {"label": "Nitrogen", "unit": "mg/kg"},
+    "P": {"label": "Phosphorus", "unit": "mg/kg"},
+    "K": {"label": "Potassium", "unit": "mg/kg"},
     "temperature": {"label": "Temperature", "unit": "°C"},
     "humidity": {"label": "Humidity", "unit": "%"},
     "ph": {"label": "Soil pH", "unit": ""},
@@ -211,25 +211,25 @@ def _improvement_tips(crop: str, filled: dict) -> list[str]:
 
     if n_val < n_mean - 10:
         tips.append(f"Increase nitrogen by applying a nitrogen-rich fertilizer "
-                    f"(e.g. urea or ammonium nitrate). Current level is {round(n_val,1)} kg/ha, "
-                    f"below the optimal {round(n_mean,1)} kg/ha for {crop}.")
+                    f"(e.g. urea or ammonium nitrate). Current level is {round(n_val,1)} mg/kg, "
+                    f"below the optimal {round(n_mean,1)} mg/kg for {crop}.")
     elif n_val > n_mean + 10:
-        tips.append(f"Reduce nitrogen input. Current level ({round(n_val,1)} kg/ha) "
-                    f"exceeds the optimal {round(n_mean,1)} kg/ha for {crop}.")
+        tips.append(f"Reduce nitrogen input. Current level ({round(n_val,1)} mg/kg) "
+                    f"exceeds the optimal {round(n_mean,1)} mg/kg for {crop}.")
 
     if p_val < p_mean - 8:
         tips.append(f"Boost phosphorus with a phosphate fertilizer (e.g. DAP or SSP). "
-                    f"Current level is {round(p_val,1)} kg/ha, below the optimal {round(p_mean,1)} kg/ha.")
+                    f"Current level is {round(p_val,1)} mg/kg, below the optimal {round(p_mean,1)} mg/kg.")
     elif p_val > p_mean + 8:
-        tips.append(f"Reduce phosphorus input. Current level ({round(p_val,1)} kg/ha) "
-                    f"exceeds the optimal {round(p_mean,1)} kg/ha.")
+        tips.append(f"Reduce phosphorus input. Current level ({round(p_val,1)} mg/kg) "
+                    f"exceeds the optimal {round(p_mean,1)} mg/kg.")
 
     if k_val < k_mean - 8:
         tips.append(f"Apply a potash supplement (e.g. muriate of potash) to raise "
-                    f"potassium from {round(k_val,1)} kg/ha to the optimal {round(k_mean,1)} kg/ha.")
+                    f"potassium from {round(k_val,1)} mg/kg to the optimal {round(k_mean,1)} mg/kg.")
     elif k_val > k_mean + 8:
-        tips.append(f"Reduce potassium application. Current level ({round(k_val,1)} kg/ha) "
-                    f"is above the optimal {round(k_mean,1)} kg/ha.")
+        tips.append(f"Reduce potassium application. Current level ({round(k_val,1)} mg/kg) "
+                    f"is above the optimal {round(k_mean,1)} mg/kg.")
 
     if ph_val < ph_mean - 0.5:
         tips.append(f"Soil pH {round(ph_val,2)} is below the preferred "
@@ -365,7 +365,7 @@ def normalize_pct(feature: str, value: float) -> int:
 
 
 def npk_shares(n: float, p: float, k: float):
-    """N, P and K expressed as a share of their combined kg/ha, summing to 100%."""
+    """N, P and K expressed as a share of their combined mg/kg total, summing to 100%."""
     total = max(n, 0) + max(p, 0) + max(k, 0)
     if total <= 0:
         return 0, 0, 0
@@ -716,8 +716,8 @@ def predict():
             "readings": readings,
             "message": (
                 "No crop matches this soil profile. The current nutrient levels and soil "
-                "characteristics do not fall within the acceptable range for any of the "
-                "recommended crops."
+                "characteristics do not fall within the acceptable range for any crop "
+                "to be recommended yet."
             ),
             "advice": advice,
             "improvement_tips": general_tips,
