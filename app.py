@@ -716,8 +716,8 @@ def predict():
             "readings": readings,
             "message": (
                 "No crop matches this soil profile. The current nutrient levels and soil "
-                "characteristics do not fall within the acceptable range for any crop "
-                "to be recommended yet."
+                "characteristics do not fall within the acceptable range required "
+                "for a crop recommendation to be made."
             ),
             "advice": advice,
             "improvement_tips": general_tips,
