@@ -30,7 +30,6 @@ OUTPUT_DIR = "outputs"
 DATA_PATH = "Crop_recommendation_filtered4.csv"
 CONF_THRESHOLD   = 0.30   # below this, blend in nearest-neighbour "fuzzy" matches
 MIN_SLOT_CONF    = 0.08   # individual recommendation slots below this are suppressed
-NPK_TOLERANCE    = 20.0   # ±20 mg/kg buffer applied to per-crop N/P/K training range
 DB_PATH = "users.db"
 SECRET_KEY_PATH = os.path.join(OUTPUT_DIR, ".flask_secret")
 
@@ -181,19 +180,6 @@ _col_ranges = np.where(_col_maxs - _col_mins == 0, 1.0, _col_maxs - _col_mins)
 _crop_means = df.groupby("label")[FEATURES].mean()
 
 
-def _npk_in_tolerance(crop: str, filled: dict) -> bool:
-    """Return True if the filled N, P and K values all fall within the crop's
-    training-data range extended by ±NPK_TOLERANCE on each side."""
-    if crop not in crop_profiles:
-        return True  # unknown crop — let model handle it
-    prof = crop_profiles[crop]
-    for feat in ("N", "P", "K"):
-        lo = prof[feat]["min"] - NPK_TOLERANCE
-        hi = prof[feat]["max"] + NPK_TOLERANCE
-        if not (lo <= filled[feat] <= hi):
-            return False
-    return True
-
 
 def _improvement_tips(crop: str, filled: dict) -> list[str]:
     """Return a list of actionable improvement tips comparing the user's filled
@@ -342,13 +328,11 @@ def predict_crop_fuzzy(values: dict):
 
     total = sum(max(c, 0) for _, c in ranked) or 1.0
 
-    # ── Filter: remove slots below confidence threshold or outside NPK ±5 ──
+    # ── Filter: remove slots below minimum confidence threshold ──────────────
     top3 = []
     for crop, conf in ranked:
         conf_norm = round(float(conf) / total, 4) if used_fuzzy else round(float(conf), 4)
         if conf_norm < MIN_SLOT_CONF:
-            continue
-        if not _npk_in_tolerance(crop, filled_dict):
             continue
         top3.append({"crop": crop, "confidence": conf_norm})
 
