@@ -41,7 +41,7 @@ const TRANSLATIONS = {
     "dashboard.welcomeHeading": "Welcome",
     "dashboard.welcomeTagline": "A Happy, Informed and Cost-effective Farming with Akuafo Ani",
     "dashboard.whyThisCrop": "Why this crop?",
-    "dashboard.soilWeatherToday": "Today's Weather",
+    "dashboard.soilWeatherToday": "Weather Info",
     "dashboard.rainfall": "Rainfall",
     "dashboard.humidity": "Humidity",
     "dashboard.condition": "Condition",
@@ -145,7 +145,7 @@ const TRANSLATIONS = {
     "dashboard.welcomeHeading": "Akwaaba",
     "dashboard.welcomeTagline": "Kuayɛ a Ɛyɛ Anigye, Ɛma Nimdeɛ, Na Ɛnhyɛ Sika Bebree Wɔ Akuafo Ani",
     "dashboard.whyThisCrop": "Adɛn nti na ɛyɛ saa aduane yi?",
-    "dashboard.soilWeatherToday": "Wim Tebea Ɛnnɛ",
+    "dashboard.soilWeatherToday": "Weather Info",
     "dashboard.rainfall": "Osu",
     "dashboard.humidity": "Fɔntɔm",
     "dashboard.condition": "Tebea",
@@ -746,27 +746,9 @@ function buildWhyNarrative(crop, rank) {
   return `${crop} is the last of the listed recommendations for your soil sample. The values for most parameters (including nitrogen, potassium, phosphorus and environmental conditions) are further off from the optimal range for ${crop} compared to the top two recommendations. However, they are still closer to what ${crop} requires than the rest of the unranked crops, making it a viable option if the higher ranked crops are not available.`;
 }
 
-// Twi version of the narrative — technical terms (nitrogen, potassium, phosphorus,
-// pH, rainfall, humidity, temperature) are kept in English as they are commonly
-// used in Ghanaian Twi agricultural speech.
-function buildWhyNarrativeTwi(crop, rank) {
-  if (rank === 0) {
-    return `Wɔde ${crop} hyɛ ase wɔ ɔkwan a ɛtɔ so ɔne so wɔ wo asase nsiesie yi mu. Wo asase mu nitrogen, potassium ne phosphorus kari krataa bɛtim nea ${crop} hia no yiye, na ɛma nnɔbae pa. Rainfall, humidity ne temperature nhyehyɛe nso yɛ pa ma ${crop}, na asase pH nso wɔ ɛnsɔ a ɛhia no mu. Enti ${crop} na ɛyɛ adeyɛ a ɛfata wo asase no pa ara.`;
-  }
-  if (rank === 1) {
-    return `${crop} yɛ adeyɛ a ɛtɔ so ɛnum mu ɔne pa wɔ wo asase ho. Nitrogen, potassium ne phosphorus kari krataa pii bɛtim nea ${crop} hia no yiye, nanso bi kaa adeyɛ a ɛtɔ so ɔne no kwan bogya kakra. Ɛkaa adeyɛ a ɛtɔ so ɔne no, wɔhia no kwan bogya a ɛyɛ den sen no, enti ${crop} yɛ ɔpɛsɛmpɛ pa.`;
-  }
-  return `${crop} na ɛyɛ adeyɛ a ɛba ɔkwan mu ɔne akyiri wɔ wo asase krataa ho. Nitrogen, potassium, phosphorus ne ɔhaw a ɛba soro nhyehyɛe pii wɔ ${crop} dɛ wɔhia no kwan bogya akyi sen adeyɛ a ɛtɔ so ɔne ne ɔne mmienu no. Nanso ɛkaa nnua a wɔankyerɛ no biara a, wɔhia ${crop} dɛ wɔhia no kwan bogya a ɛyɛ den, enti sɛ nnua a ɛtɔ so ɔne mmienu no nni ho a, ${crop} bɛyɛ ɔpɛsɛmpɛ pa.`;
-}
-
 function cropSpeechText(rec, rank = 0) {
   const pct = Math.round(rec.confidence * 100);
   return [`${rec.crop}, ${pct} percent match.`, buildWhyNarrative(rec.crop, rank)];
-}
-
-function cropSpeechTextTwi(rec, rank = 0) {
-  const pct = Math.round(rec.confidence * 100);
-  return [`${rec.crop}, ${pct} ɔha mu.`, buildWhyNarrativeTwi(rec.crop, rank)];
 }
 
 function speechFriendly(line) {
@@ -1042,69 +1024,7 @@ document.addEventListener("change", (e) => {
   speakAbenaLine(tok);
 });
 
-// ── TTS Language Picker ───────────────────────────────────────────────────
-// A small floating dropdown that lets the user choose English or Twi before
-// audio starts. Appears below whichever Listen button was tapped.
-let ttsPendingLines       = null;
-let ttsPendingLinesTw     = null; // Twi audio lines — used when abena_twi_lite is selected
-let ttsPendingBtn         = null;
-let ttsPendingNarrativeEl = null; // DOM element showing the narrative text
-let ttsPendingNarrativeTw = null; // Twi narrative text to display when Twi is chosen
-
-function showTTSPicker(lines, btn, linesTw = null, narrativeEl = null, narrativeTw = null) {
-  ttsPendingLines       = lines;
-  ttsPendingLinesTw     = linesTw;
-  ttsPendingBtn         = btn;
-  ttsPendingNarrativeEl = narrativeEl;
-  ttsPendingNarrativeTw = narrativeTw;
-  const picker = document.getElementById("tts-picker");
-  const rect   = btn.getBoundingClientRect();
-  // Position below button, clamped inside the viewport
-  picker.style.top  = `${rect.bottom + 6}px`;
-  picker.style.left = `${Math.min(rect.left, window.innerWidth - 170)}px`;
-  picker.classList.remove("hidden");
-  // Close if user clicks anywhere outside the picker (after this tick)
-  setTimeout(() => document.addEventListener("click", closeTTSPickerOutside, { once: true, capture: true }), 10);
-}
-
-function closeTTSPickerOutside(e) {
-  const picker = document.getElementById("tts-picker");
-  if (picker && !picker.contains(e.target)) picker.classList.add("hidden");
-}
-
-function hideTTSPicker() {
-  document.getElementById("tts-picker").classList.add("hidden");
-  ttsPendingLines       = null;
-  ttsPendingLinesTw     = null;
-  ttsPendingBtn         = null;
-  ttsPendingNarrativeEl = null;
-  ttsPendingNarrativeTw = null;
-}
-
-// Picker button click → start speech with selected voice
-document.getElementById("tts-picker").addEventListener("click", (e) => {
-  const pickBtn = e.target.closest(".tts-pick-btn");
-  if (!pickBtn) return;
-  e.stopPropagation(); // don't trigger the outside-click close handler
-  const voice = pickBtn.dataset.voice;
-  const isTwi = voice === "abena_twi_lite";
-
-  // Capture pending state before hideTTSPicker clears it
-  const lines       = (isTwi && ttsPendingLinesTw) ? ttsPendingLinesTw : ttsPendingLines;
-  const btn         = ttsPendingBtn;
-  const narrativeEl = ttsPendingNarrativeEl;
-  const narrativeTw = ttsPendingNarrativeTw;
-  hideTTSPicker();
-
-  // Swap displayed narrative text to Twi (restored by stopActiveSpeech when done)
-  if (isTwi && narrativeEl && narrativeTw) {
-    _narrativeOrigHTML = narrativeEl.innerHTML;
-    _narrativeEl       = narrativeEl;
-    narrativeEl.innerHTML = `<p>${narrativeTw}</p>`;
-  }
-
-  if (lines && btn) speakInEnglish(lines, btn, voice);
-});
+// ── TTS (English only, Ghanaian male accent) ──────────────────────────────
 
 // ── GPS + OWM weather integration ────────────────────────────────────────
 // On login: requests GPS coordinates, calls /api/weather (OWM proxy) to get
@@ -1158,7 +1078,7 @@ async function loadWeather() {
           const parts = [];
           if (owmHumidityPct !== null) parts.push(`Humidity: ${owmHumidityPct}%`);
           if (owmRainfallMm  !== null) parts.push(`Rainfall: ${owmRainfallMm} mm`);
-          gpsBtn.title = `From your location (OWM) — ${parts.join(", ")}. Tap to pre-fill.`;
+          gpsBtn.title = `From your location (OWM), ${parts.join(", ")}. Tap to pre-fill.`;
         }
       } catch (e) { console.warn("Weather fetch failed:", e); }
     },
@@ -1227,7 +1147,7 @@ async function checkLiveFeed() {
     if (res.status === 204) {
       // No reading yet from sensor
       setLiveDot("idle");
-      liveStatus.textContent = "No sensor reading yet — waiting for ESP32.";
+      liveStatus.textContent = "No sensor reading yet. Waiting for ESP32.";
       return null;
     }
     if (!res.ok) throw new Error("HTTP " + res.status);
@@ -1274,7 +1194,7 @@ document.getElementById("live-feed-btn").addEventListener("click", async () => {
   const mEl = document.getElementById("in-moisture");
   if (mEl && data.humidity !== undefined) mEl.value = Number(data.humidity).toFixed(1);
 
-  liveStatus.textContent = "Fields filled — running analysis…";
+  liveStatus.textContent = "Fields filled. Running analysis...";
 
   // Switch to Crops tab so the user sees the form, then auto-analyze
   showView("crops");
@@ -1409,10 +1329,7 @@ function renderResult(data) {
     listenBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (activeSpeechBtn === listenBtn) { stopActiveSpeech(); return; }
-      showTTSPicker(
-        cropSpeechText(rec, i), listenBtn, cropSpeechTextTwi(rec, i),
-        row.querySelector(".crop-reasons"), buildWhyNarrativeTwi(rec.crop, i)
-      );
+      speakInEnglish(cropSpeechText(rec, i), listenBtn, "kwabena_eng");
     });
     box.appendChild(row);
   });
@@ -1485,21 +1402,14 @@ function renderTopPick(data) {
   whyToggle.setAttribute("aria-expanded", "false");
   whyToggle.classList.remove("open");
   whyCard.style.display = "block";
-  currentTopSpeechText   = cropSpeechText(top, 0);
-  currentTopSpeechTextTw = cropSpeechTextTwi(top, 0);
-  currentTopNarrativeTwi = buildWhyNarrativeTwi(top.crop, 0);
+  currentTopSpeechText = cropSpeechText(top, 0);
 }
 
-let currentTopSpeechText   = "";
-let currentTopSpeechTextTw = null;
-let currentTopNarrativeTwi = null;
+let currentTopSpeechText = "";
 document.getElementById("why-listen-btn").addEventListener("click", () => {
   const btn = document.getElementById("why-listen-btn");
   if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
-  showTTSPicker(
-    currentTopSpeechText, btn, currentTopSpeechTextTw,
-    document.getElementById("why-list"), currentTopNarrativeTwi
-  );
+  speakInEnglish(currentTopSpeechText, btn, "kwabena_eng");
 });
 
 document.getElementById("why-toggle").addEventListener("click", () => {
@@ -1521,25 +1431,18 @@ function openCropDetail(rec, rank = 0) {
   document.getElementById("crop-detail-name").textContent = rec.crop;
   document.getElementById("crop-detail-conf").textContent = `${pct}% match for your current soil sample`;
   document.getElementById("crop-detail-reasons").innerHTML = `<p>${buildWhyNarrative(rec.crop, rank)}</p>`;
-  currentDetailSpeechText   = cropSpeechText(rec, rank);
-  currentDetailSpeechTextTw = cropSpeechTextTwi(rec, rank);
-  currentDetailNarrativeTwi = buildWhyNarrativeTwi(rec.crop, rank);
+  currentDetailSpeechText = cropSpeechText(rec, rank);
 
   document.getElementById("crop-detail-overlay").classList.add("open");
   document.body.style.overflow = "hidden";
 }
 
-let currentDetailSpeechText   = "";
-let currentDetailSpeechTextTw = null;
-let currentDetailNarrativeTwi = null;
+let currentDetailSpeechText = "";
 document.getElementById("crop-detail-listen-btn").addEventListener("click", (e) => {
   e.stopPropagation();
   const btn = document.getElementById("crop-detail-listen-btn");
   if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
-  showTTSPicker(
-    currentDetailSpeechText, btn, currentDetailSpeechTextTw,
-    document.getElementById("crop-detail-reasons"), currentDetailNarrativeTwi
-  );
+  speakInEnglish(currentDetailSpeechText, btn, "kwabena_eng");
 });
 
 function closeCropDetail() {
@@ -1659,7 +1562,7 @@ let currentIdeasSpeechText = "";
 document.getElementById("ideas-listen-btn").addEventListener("click", () => {
   const btn = document.getElementById("ideas-listen-btn");
   if (activeSpeechBtn === btn) { stopActiveSpeech(); return; }
-  showTTSPicker(currentIdeasSpeechText, btn);
+  speakInEnglish(currentIdeasSpeechText, btn, "kwabena_eng");
 });
 
 function renderFields(data) {
@@ -1677,7 +1580,95 @@ function renderFields(data) {
   document.getElementById("field-info").innerHTML = rows.map(([label, value]) => `
     <div class="field-row"><span class="label">${label}</span><span class="value">${value}</span></div>
   `).join("");
+  // Show PDF download button once summary is populated
+  const pdfRow = document.getElementById("pdf-btn-row");
+  if (pdfRow) pdfRow.style.display = "flex";
 }
+
+// ── PDF Report Download ───────────────────────────────────────────────────
+// Collects the Ideas section and Summary section, formats them as a styled
+// page, and opens it in a print window so the user can Save as PDF.
+
+function downloadPDF() {
+  // Collect Ideas content
+  const ideasBox = document.getElementById("ideas-box");
+  const ideasItems = ideasBox ? ideasBox.querySelectorAll(".idea-item, .idea-item.idea-tip-model") : [];
+  const ideasLines = Array.from(ideasItems).map(item => {
+    const icon  = item.querySelector(".idea-icon")  ? item.querySelector(".idea-icon").textContent.trim()  : "";
+    const title = item.querySelector(".idea-title") ? item.querySelector(".idea-title").textContent.trim() : "";
+    const text  = item.querySelector(".idea-text")  ? item.querySelector(".idea-text").textContent.trim()  : "";
+    return `<div class="pdf-tip"><span class="pdf-tip-icon">${icon}</span><div><strong>${title}</strong><p>${text}</p></div></div>`;
+  }).join("");
+
+  // Collect Summary rows
+  const fieldInfo = document.getElementById("field-info");
+  const fieldRows = fieldInfo ? fieldInfo.querySelectorAll(".field-row") : [];
+  const summaryLines = Array.from(fieldRows).map(row => {
+    const label = row.querySelector(".label") ? row.querySelector(".label").textContent.trim() : "";
+    const value = row.querySelector(".value") ? row.querySelector(".value").textContent.trim() : "";
+    return `<tr><td class="pdf-td-label">${label}</td><td class="pdf-td-value">${value}</td></tr>`;
+  }).join("");
+
+  const now = new Date().toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" });
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Akuafo Ani Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; color: #1a2e1a; background: #fff; padding: 32px 40px; }
+    .report-header { display: flex; justify-content: space-between; align-items: flex-end;
+                     border-bottom: 3px solid #2e7d32; padding-bottom: 12px; margin-bottom: 28px; }
+    .report-title  { font-size: 22px; font-weight: 700; color: #2e7d32; letter-spacing: 0.5px; }
+    .report-date   { font-size: 12px; color: #555; }
+    .section-title { font-size: 15px; font-weight: 700; color: #2e7d32;
+                     border-left: 4px solid #2e7d32; padding-left: 10px;
+                     margin: 0 0 14px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .section-block { margin-bottom: 32px; }
+    .pdf-tip       { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+    .pdf-tip-icon  { font-size: 20px; min-width: 28px; }
+    .pdf-tip strong { font-size: 13px; color: #1a2e1a; display: block; margin-bottom: 2px; }
+    .pdf-tip p      { font-size: 12px; color: #444; line-height: 1.5; margin: 0; }
+    table          { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .pdf-td-label  { padding: 7px 12px; font-weight: 600; color: #2e7d32;
+                     background: #f1f8e9; border: 1px solid #c8e6c9; width: 45%; }
+    .pdf-td-value  { padding: 7px 12px; border: 1px solid #c8e6c9; }
+    tr:nth-child(even) .pdf-td-value { background: #fafafa; }
+    .footer        { margin-top: 36px; font-size: 11px; color: #888; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; }
+    @media print { body { padding: 20px 28px; } }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <div class="report-title">🌿 Akuafo Ani: Soil Analysis Report</div>
+    <div class="report-date">${now}</div>
+  </div>
+
+  <div class="section-block">
+    <div class="section-title">Insights &amp; Tips</div>
+    ${ideasLines || "<p style='color:#888;font-size:13px'>No tips available.</p>"}
+  </div>
+
+  <div class="section-block">
+    <div class="section-title">Sample Summary</div>
+    <table>${summaryLines || "<tr><td colspan='2' style='padding:8px;color:#888'>No data available.</td></tr>"}</table>
+  </div>
+
+  <div class="footer">Generated by Akuafo Ani &mdash; Smarter crop choices, straight from your soil.</div>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank", "width=800,height=700");
+  if (!win) { alert("Please allow pop-ups to download the PDF."); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); }, 400);
+}
+
+document.getElementById("pdf-download-btn").addEventListener("click", downloadPDF);
 
 // ── Input validation warning modal ─────────────────────────────────────────
 function showInputWarning(title, msg) {

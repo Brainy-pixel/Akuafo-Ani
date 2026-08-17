@@ -950,6 +950,31 @@ h1, h2, h3, h4,
 .tts-pick-btn:hover,
 .tts-pick-btn:focus-visible { background: var(--card-alt); outline: none; }
 
+/* ── PDF Download Button ────────────────────────────────────────────────── */
+.pdf-btn-row {
+  justify-content: center;
+  padding: 12px 16px 4px;
+}
+.pdf-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--forest);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 13px 28px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  justify-content: center;
+  letter-spacing: 0.2px;
+  transition: background 0.15s, transform 0.1s;
+}
+.pdf-download-btn:hover  { background: color-mix(in srgb, var(--forest) 85%, #000); }
+.pdf-download-btn:active { transform: scale(0.97); }
+
 /* ── Input Validation Warning Modal ─────────────────────────────────────── */
 .input-warning-overlay {
   position: fixed;

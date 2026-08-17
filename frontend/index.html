@@ -89,7 +89,7 @@
             <span class="weather-pin">&#128205;</span>
             <div>
               <div class="weather-place" id="weather-place">Locating...</div>
-              <div class="weather-sub" data-i18n="dashboard.soilWeatherToday">Today's Weather</div>
+              <div class="weather-sub" data-i18n="dashboard.soilWeatherToday">Weather Info</div>
             </div>
           </div>
           <div class="weather-temp-block">
@@ -273,6 +273,12 @@
         <div class="placeholder-text" data-i18n="summary.placeholder">No sample analyzed yet. Your soil readings will appear here.</div>
       </section>
 
+      <div class="pdf-btn-row" id="pdf-btn-row" style="display:none;">
+        <button class="pdf-download-btn" id="pdf-download-btn" type="button">
+          <span>⬇</span> Download PDF Report
+        </button>
+      </div>
+
     </div>
 
     <!-- ─────────────────────────── PROFILE VIEW ─────────────────────────── -->
@@ -350,8 +356,8 @@
             <button class="avatar-edit-btn" id="avatar-edit-btn" type="button" title="Change photo">&#128247;</button>
             <input type="file" id="avatar-file-input" accept="image/*" capture="user" class="hidden">
           </div>
-          <div class="profile-name" id="profile-name-display">—</div>
-          <div class="profile-email" id="profile-email-display">—</div>
+          <div class="profile-name" id="profile-name-display"></div>
+          <div class="profile-email" id="profile-email-display"></div>
           <button class="ghost-btn avatar-remove-btn hidden" id="avatar-remove-btn" type="button" data-i18n="profile.removePhoto">Remove photo</button>
         </section>
 
@@ -506,10 +512,9 @@
 
 </div>
 
-<!-- TTS Language Picker — floats near whichever Listen button was tapped -->
-<div id="tts-picker" class="tts-picker hidden" role="dialog" aria-label="Choose audio language">
+<!-- TTS Language Picker (English only) -->
+<div id="tts-picker" class="tts-picker hidden" role="dialog" aria-label="Audio language">
   <button class="tts-pick-btn" data-voice="kwabena_eng" type="button">🔊 English</button>
-  <button class="tts-pick-btn" data-voice="abena_twi_lite" type="button">🔊 Twi</button>
 </div>
 
 <!-- Input Validation Warning Modal -->
