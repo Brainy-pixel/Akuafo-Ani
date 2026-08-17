@@ -48,6 +48,10 @@ app = Flask(__name__, static_folder="frontend", static_url_path="")
 # OpenWeatherMap API key — set OPENWEATHER_API_KEY in your environment / Render settings.
 OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
 
+# ── Live sensor feed — stores the most recent ESP32 reading in memory ─────
+# Resets on server restart; no persistence needed for live display.
+_latest_sensor: dict = {}
+
 
 def _load_or_create_secret_key():
     """Persists a random session-signing key across restarts (set the
@@ -603,9 +607,29 @@ def update_preferences():
     return jsonify(_user_public(row))
 
 
+@app.route("/api/latest", methods=["GET"])
+def latest_sensor():
+    """Returns the most recent reading posted by the ESP32 sensor node.
+    Returns 204 No Content if no reading has arrived yet this session."""
+    if not _latest_sensor:
+        return "", 204
+    return jsonify(_latest_sensor)
+
+
 @app.route("/api/predict", methods=["POST"])
 def predict():
+    global _latest_sensor
     body = request.get_json(force=True) or {}
+
+    # If the request comes from the ESP32 sensor (has a "source" field or all 7
+    # raw numeric fields present), store it for the live-feed endpoint.
+    raw_fields = {f: body.get(f) for f in FEATURES}
+    if all(v is not None for v in raw_fields.values()):
+        _latest_sensor = {
+            **{f: float(v) for f, v in raw_fields.items()},
+            "received_at": datetime.now(timezone.utc).isoformat(),
+        }
+
     values = {}
     for f in FEATURES:
         v = body.get(f, None)

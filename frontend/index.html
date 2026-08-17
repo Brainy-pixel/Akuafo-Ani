@@ -226,6 +226,13 @@
       </section>
 
       <button class="primary-btn" id="analyze-btn">&#129514; <span data-i18n="crops.analyzeBtn">Analyze Soil Sample</span></button>
+
+      <!-- Live sensor feed button -->
+      <button class="live-feed-btn" id="live-feed-btn" type="button" title="Load latest reading from the ESP32 sensor node">
+        <span class="live-dot" id="live-dot"></span>&#128225; Live Sensor
+      </button>
+      <div class="live-feed-status" id="live-feed-status"></div>
+
       <button class="secondary-btn" id="clear-all-btn" type="button" data-i18n="crops.clearAll">Clear All</button>
       <button class="secondary-btn" id="reset-btn" type="button" data-i18n="crops.resetAll">Reset</button>
 

@@ -1183,8 +1183,83 @@ document.getElementById("clear-all-btn").addEventListener("click", () => {
 document.getElementById("reset-btn").addEventListener("click", () => {
   resetDashboardState();
   initCropsHero();
-  showView("dashboard"); // return to dashboard tab, matching startup state
+  showView("dashboard");
 });
+
+// ── Live Sensor Feed ──────────────────────────────────────────────────────
+// Polls /api/latest every 30 s and lights up the indicator dot when a
+// reading is available. Clicking "Live Sensor" fills all form fields with
+// the ESP32's latest values and auto-runs analysis.
+
+const liveDot    = document.getElementById("live-dot");
+const liveStatus = document.getElementById("live-feed-status");
+let   livePollTimer = null;
+
+function setLiveDot(state) {
+  // state: "idle" | "live" | "loading" | "none"
+  liveDot.className = "live-dot live-dot--" + state;
+}
+
+async function checkLiveFeed() {
+  try {
+    const res = await fetch("/api/latest");
+    if (res.status === 204) {
+      // No reading yet from sensor
+      setLiveDot("idle");
+      liveStatus.textContent = "No sensor reading yet — waiting for ESP32.";
+      return null;
+    }
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    setLiveDot("live");
+
+    const age = data.received_at
+      ? Math.round((Date.now() - new Date(data.received_at).getTime()) / 1000)
+      : null;
+    liveStatus.textContent = age !== null
+      ? `Last reading: ${age < 60 ? age + "s ago" : Math.round(age / 60) + " min ago"}`
+      : "Sensor reading available.";
+    return data;
+  } catch (e) {
+    setLiveDot("idle");
+    liveStatus.textContent = "Could not reach server.";
+    return null;
+  }
+}
+
+function startLivePoll() {
+  checkLiveFeed();
+  livePollTimer = setInterval(checkLiveFeed, 30000);
+}
+
+document.getElementById("live-feed-btn").addEventListener("click", async () => {
+  setLiveDot("loading");
+  liveStatus.textContent = "Fetching latest sensor reading…";
+
+  const data = await checkLiveFeed();
+  if (!data) return;
+
+  // Fill form fields with sensor values
+  const FIELD_MAP = {
+    N: "N", P: "P", K: "K",
+    temperature: "temperature", humidity: "humidity",
+    ph: "ph", rainfall: "rainfall"
+  };
+  for (const [key, fieldId] of Object.entries(FIELD_MAP)) {
+    const el = document.getElementById("in-" + fieldId);
+    if (el && data[key] !== undefined) el.value = Number(data[key]).toFixed(1);
+  }
+
+  liveStatus.textContent = "Fields filled — running analysis…";
+
+  // Switch to Crops tab so the user sees the form, then auto-analyze
+  showView("crops");
+  await analyze();
+});
+
+// Start polling once the dashboard is visible (auth guard already handles this)
+document.addEventListener("DOMContentLoaded", () => startLivePoll());
+// ─────────────────────────────────────────────────────────────────────────
 
 function setGauge(gaugeId, pct, colorVar) {
   const gauge = document.getElementById(gaugeId);
