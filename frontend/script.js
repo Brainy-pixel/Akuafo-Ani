@@ -794,13 +794,11 @@ function updateSeekSlider() {
   if (slider) slider.value = speechCurrentLine;
 }
 
-// ── Abena TTS integration ────────────────────────────────────────────────
-// Voice map: Twi UI → Twi voice (female, only option); English → Ghanaian male accent.
-// Note: Abena currently has no Twi male voice; abena_twi_high is unavailable (503).
-const ABENA_VOICE = { tw: "abena_twi_lite", en: "kwabena_eng" };
+// ── Abena TTS integration (English only, Ghanaian male accent) ───────────
+const ABENA_VOICE = "kwabena_eng";
 const abenaTTSCache = new Map(); // "voice:text" → blob URL (session-scoped)
 let   activeAudio   = null;      // HTMLAudioElement currently playing
-let   speechVoice   = "kwabena_eng"; // voice chosen for the current speech session
+let   speechVoice   = "kwabena_eng"; // voice for the current speech session
 
 // Returns the voice for the active session (set by speakInEnglish via picker)
 function abenaVoice() { return speechVoice; }
@@ -948,7 +946,7 @@ function speakInEnglish(lines, btn, voice) {
   if (!linesArr.length) return;
 
   // Set the voice for this session BEFORE any fetchAbenaAudio calls
-  speechVoice = voice || ABENA_VOICE[currentLanguage] || "kwabena_eng";
+  speechVoice = voice || ABENA_VOICE;
 
   speechLines = linesArr.map(speechFriendly);
   speechCurrentLine = 0;
