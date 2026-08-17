@@ -1063,10 +1063,7 @@ async function loadWeather() {
         if (w.humidity   != null) owmHumidityPct = w.humidity;
         if (w.rain_mm_hr != null) owmRainfallMm  = w.rain_mm_hr;
 
-        // Update location name on the weather card
-        const placeName = w.location || "Your Location";
-        const placeEl = document.getElementById("weather-place");
-        if (placeEl) placeEl.textContent = placeName;
+        // Location label is fixed to KNUST — do not overwrite from OWM
 
         // Reveal GPS button and update tooltip
         const gpsBtn = document.getElementById("gps-fill-rainfall-btn");
