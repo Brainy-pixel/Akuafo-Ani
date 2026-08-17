@@ -51,6 +51,8 @@ OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
 # ── Live sensor feed — stores the most recent ESP32 reading in memory ─────
 # Resets on server restart; no persistence needed for live display.
 _latest_sensor: dict = {}
+_last_heartbeat: float = 0.0   # Unix timestamp of last ESP32 contact (heartbeat or reading)
+_HEARTBEAT_STALE = 45          # seconds — 2.25× the 20s heartbeat interval
 
 
 def _load_or_create_secret_key():
@@ -607,23 +609,26 @@ def update_preferences():
     return jsonify(_user_public(row))
 
 
+@app.route("/api/heartbeat", methods=["POST"])
+def heartbeat():
+    """Lightweight keep-alive posted by the ESP32 every 20 s.
+    Updates _last_heartbeat so /api/latest knows the ESP32 is online."""
+    global _last_heartbeat
+    import time
+    _last_heartbeat = time.time()
+    return "", 204
+
+
 @app.route("/api/latest", methods=["GET"])
 def latest_sensor():
     """Returns the most recent reading posted by the ESP32 sensor node.
-    Returns 204 No Content if no reading has arrived yet, or if the last
-    reading is older than 10 minutes (ESP32 is considered offline)."""
-    if not _latest_sensor:
+    Returns 204 No Content if:
+      - no reading has arrived yet this session, OR
+      - no heartbeat has been received in the last 45 seconds
+        (ESP32 is considered powered off)."""
+    import time
+    if not _latest_sensor or (time.time() - _last_heartbeat) > _HEARTBEAT_STALE:
         return "", 204
-    received_at = _latest_sensor.get("received_at")
-    if received_at:
-        from datetime import datetime, timezone
-        try:
-            ts = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
-            age_seconds = (datetime.now(timezone.utc) - ts).total_seconds()
-            if age_seconds > 600:   # 10 minutes — 2× the 5-min read interval
-                return "", 204
-        except (ValueError, TypeError):
-            pass
     return jsonify(_latest_sensor)
 
 
@@ -632,14 +637,17 @@ def predict():
     global _latest_sensor
     body = request.get_json(force=True) or {}
 
-    # If the request comes from the ESP32 sensor (has a "source" field or all 7
-    # raw numeric fields present), store it for the live-feed endpoint.
+    # If the request comes from the ESP32 sensor (all 7 raw numeric fields
+    # present), store it for the live-feed endpoint and bump the heartbeat
+    # timestamp so /api/latest knows the ESP32 is still online.
+    import time
     raw_fields = {f: body.get(f) for f in FEATURES}
     if all(v is not None for v in raw_fields.values()):
         _latest_sensor = {
             **{f: float(v) for f, v in raw_fields.items()},
             "received_at": datetime.now(timezone.utc).isoformat(),
         }
+        _last_heartbeat = time.time()   # full reading counts as a heartbeat
 
     values = {}
     for f in FEATURES:

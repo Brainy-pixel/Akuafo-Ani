@@ -22,16 +22,18 @@
 #include <ArduinoJson.h>
 
 // ── WiFi / API config ─────────────────────────────────────────────────────
-#define WIFI_SSID       "YOUR_WIFI_NAME"
-#define WIFI_PASSWORD   "YOUR_WIFI_PASSWORD"
-#define PREDICT_URL     "https://akuafo-ani.onrender.com/api/predict"
-#define OWM_KEY         "YOUR_OPENWEATHERMAP_API_KEY"
+#define WIFI_SSID        "YOUR_WIFI_NAME"
+#define WIFI_PASSWORD    "YOUR_WIFI_PASSWORD"
+#define PREDICT_URL      "https://akuafo-ani.onrender.com/api/predict"
+#define HEARTBEAT_URL    "https://akuafo-ani.onrender.com/api/heartbeat"
+#define OWM_KEY          "YOUR_OPENWEATHERMAP_API_KEY"
 
 // Fixed farm coordinates for OWM rainfall lookup
-#define LOCATION_LAT    5.6037
-#define LOCATION_LNG   -0.1870
+#define LOCATION_LAT     5.6037
+#define LOCATION_LNG    -0.1870
 
-#define READ_INTERVAL   300000UL   // 5 minutes between readings
+#define READ_INTERVAL    300000UL   // 5 minutes between full soil readings
+#define HEARTBEAT_INTERVAL 20000UL  // 20 seconds between keep-alive pings
 
 // ── RS485 / sensor config ─────────────────────────────────────────────────
 #define RS485_RX_PIN  26   // MAX485 RO → ESP32 RX
@@ -42,7 +44,8 @@
 #define BAUD_RATE     4800
 
 HardwareSerial RS485Serial(2);
-unsigned long lastRead = 0;
+unsigned long lastRead      = 0;
+unsigned long lastHeartbeat = 0;
 
 
 // ── RS485 direction control ───────────────────────────────────────────────
@@ -194,6 +197,22 @@ float fetchRain() {
 }
 
 
+// ── Heartbeat ping — keeps the live-sensor dot green while ESP32 is on ───
+// POSTs an empty body to /api/heartbeat every 20 s. The server returns 204
+// immediately. If the server stops receiving pings for 45 s it treats the
+// ESP32 as offline and /api/latest returns 204 to the frontend.
+
+void sendHeartbeat() {
+  if (!wifiConnect()) return;
+  HTTPClient h;
+  h.begin(HEARTBEAT_URL);
+  h.addHeader(F("Content-Type"), F("application/json"));
+  int code = h.POST("{}");
+  h.end();
+  Serial.printf("[HB] %d\n", code);
+}
+
+
 // ── POST sensor values to Akuafo Ani app ─────────────────────────────────
 
 void postToApp(float moisture, float temperature, float ec,
@@ -291,7 +310,13 @@ void setup() {
 // ── Main loop ─────────────────────────────────────────────────────────────
 
 void loop() {
-  // Run immediately on first boot, then every READ_INTERVAL
+  // ── Heartbeat — fires every 20 s regardless of soil read schedule ────────
+  if (millis() - lastHeartbeat >= HEARTBEAT_INTERVAL) {
+    lastHeartbeat = millis();
+    if (WiFi.status() == WL_CONNECTED) sendHeartbeat();
+  }
+
+  // ── Full soil reading — runs immediately on first boot, then every 5 min ─
   if (lastRead && millis() - lastRead < READ_INTERVAL) return;
   lastRead = millis();
 
