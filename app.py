@@ -610,9 +610,20 @@ def update_preferences():
 @app.route("/api/latest", methods=["GET"])
 def latest_sensor():
     """Returns the most recent reading posted by the ESP32 sensor node.
-    Returns 204 No Content if no reading has arrived yet this session."""
+    Returns 204 No Content if no reading has arrived yet, or if the last
+    reading is older than 10 minutes (ESP32 is considered offline)."""
     if not _latest_sensor:
         return "", 204
+    received_at = _latest_sensor.get("received_at")
+    if received_at:
+        from datetime import datetime, timezone
+        try:
+            ts = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
+            age_seconds = (datetime.now(timezone.utc) - ts).total_seconds()
+            if age_seconds > 600:   # 10 minutes — 2× the 5-min read interval
+                return "", 204
+        except (ValueError, TypeError):
+            pass
     return jsonify(_latest_sensor)
 
 
