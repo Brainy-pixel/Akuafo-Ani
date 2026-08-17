@@ -934,8 +934,7 @@ function speakBrowserLine(myToken) {
   window.speechSynthesis.speak(utterance);
 }
 
-// voice: explicit Abena voice ID from the picker (kwabena_eng | abena_twi_lite)
-// If omitted, falls back to the UI-language voice.
+// voice: Abena voice ID — defaults to kwabena_eng (Ghanaian male accent)
 function speakInEnglish(lines, btn, voice) {
   const wasThisButton = activeSpeechBtn === btn;
   stopActiveSpeech();
