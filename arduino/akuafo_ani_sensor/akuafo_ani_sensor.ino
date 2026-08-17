@@ -1,192 +1,173 @@
 /*
- * Akuafo Ani — ESP32 Soil Sensor Node v1.4
+ * Akuafo Ani — ESP32 Soil Sensor Node v2.0
  *
  * Hardware:
- *   ESP32 DevKit | RS485 7-in-1 Modbus soil sensor | MAX485 module
+ *   ESP32 DevKit | SN-3002 7-in-1 RS485 Modbus soil sensor | MAX485 module
  *
  * Wiring:
- *   MAX485 DI (TX) → GPIO27    MAX485 RO (RX) → GPIO26
- *   MAX485 DE      → GPIO14    MAX485 RE      → GPIO13
- *   Sensor A+/B-   → MAX485 A/B terminals (12 V supply for sensor)
+ *   MAX485 RO  → GPIO26   MAX485 DI ← GPIO27
+ *   MAX485 RE  → GPIO13   MAX485 DE ← GPIO14
+ *   Sensor A+/B- → MAX485 A/B terminals (12 V supply for sensor)
  *
- * Libraries (Sketch → Include Library → Manage Libraries):
+ * Libraries (Sketch → Manage Libraries):
  *   ArduinoJson by Benoit Blanchon
  *
- * Board: ESP32 Dev Module
+ * Board   : ESP32 Dev Module
  * Partition: Huge APP (3MB No OTA)
  */
 
-#include <HardwareSerial.h>
+#include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-// ── CONFIG ────────────────────────────────────────────────────────────────
-#define WIFI_SSID     "YOUR_WIFI_NAME"
-#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
-#define PREDICT_URL   "https://akuafo-ani.onrender.com/api/predict"
-#define OWM_KEY       "YOUR_OPENWEATHERMAP_API_KEY"
+// ── WiFi / API config ─────────────────────────────────────────────────────
+#define WIFI_SSID       "YOUR_WIFI_NAME"
+#define WIFI_PASSWORD   "YOUR_WIFI_PASSWORD"
+#define PREDICT_URL     "https://akuafo-ani.onrender.com/api/predict"
+#define OWM_KEY         "YOUR_OPENWEATHERMAP_API_KEY"
 
-// Fixed farm location for OWM rainfall lookup
-#define LOCATION_LAT   5.6037
-#define LOCATION_LNG  -0.1870
+// Fixed farm coordinates for OWM rainfall lookup
+#define LOCATION_LAT    5.6037
+#define LOCATION_LNG   -0.1870
 
-#define READ_INTERVAL  300000UL   // 5 minutes between readings
-#define RS485_BAUD     4800
-#define SENSOR_ADDR    0x01
+#define READ_INTERVAL   300000UL   // 5 minutes between readings
 
-// ── PINS ──────────────────────────────────────────────────────────────────
-#define RS485_TX  27   // ESP32 TX → MAX485 DI
-#define RS485_RX  26   // ESP32 RX ← MAX485 RO
-#define RE        13   // MAX485 RE (Receiver Enable, active LOW)
-#define DE        14   // MAX485 DE (Driver Enable, active HIGH)
+// ── RS485 / sensor config ─────────────────────────────────────────────────
+#define RS485_RX_PIN  26   // MAX485 RO → ESP32 RX
+#define RS485_TX_PIN  27   // ESP32 TX  → MAX485 DI
+#define RS485_RE_PIN  13
+#define RS485_DE_PIN  14
+#define SENSOR_ID     0x01
+#define BAUD_RATE     4800
 
 HardwareSerial RS485Serial(2);
 unsigned long lastRead = 0;
 
-struct Soil { float h, t, ec, ph, n, p, k; bool ok; };
 
-// ── RS485 direction helpers ───────────────────────────────────────────────
-inline void txMode() {
-  digitalWrite(DE, HIGH);   // enable driver
-  digitalWrite(RE, HIGH);   // disable receiver (avoid echo)
+// ── RS485 direction control ───────────────────────────────────────────────
+
+void rs485Transmit() {
+  digitalWrite(RS485_RE_PIN, HIGH);
+  digitalWrite(RS485_DE_PIN, HIGH);
 }
 
-inline void rxMode() {
-  digitalWrite(DE, LOW);    // disable driver
-  digitalWrite(RE, LOW);    // enable receiver
+void rs485Receive() {
+  digitalWrite(RS485_DE_PIN, LOW);
+  digitalWrite(RS485_RE_PIN, LOW);
 }
 
-// ── CRC-16/Modbus ─────────────────────────────────────────────────────────
-uint16_t crc16(const uint8_t* d, uint8_t len) {
-  uint16_t c = 0xFFFF;
-  while (len--) {
-    c ^= *d++;
-    for (uint8_t i = 0; i < 8; i++)
-      c = (c & 1) ? (c >> 1) ^ 0xA001 : c >> 1;
+
+// ── Modbus CRC16 ──────────────────────────────────────────────────────────
+
+uint16_t modbusCRC(uint8_t *buffer, uint8_t length) {
+  uint16_t crc = 0xFFFF;
+  for (uint8_t pos = 0; pos < length; pos++) {
+    crc ^= buffer[pos];
+    for (uint8_t i = 0; i < 8; i++) {
+      if (crc & 0x0001) { crc >>= 1; crc ^= 0xA001; }
+      else               { crc >>= 1; }
+    }
   }
-  return c;
+  return crc;
 }
 
-// ── Print helpers ─────────────────────────────────────────────────────────
-void printHexByte(uint8_t b) {
-  if (b < 0x10) Serial.print('0');
-  Serial.print(b, HEX);
-  Serial.print(' ');
-}
-
-void printHexMsg(const uint8_t* buf, uint8_t len) {
-  for (uint8_t i = 0; i < len; i++) printHexByte(buf[i]);
-  Serial.println();
-}
 
 // ── Read 7 registers from soil sensor ────────────────────────────────────
-//
-// Modbus response frame (19 bytes):
-//   [0]    Device address  0x01
-//   [1]    Function code   0x03
-//   [2]    Byte count      0x0E (14 data bytes = 7 registers × 2)
-//   [3-4]  Register 0  humidity    ×0.1 %
-//   [5-6]  Register 1  temperature ×0.1 °C
-//   [7-8]  Register 2  EC          μS/cm
-//   [9-10] Register 3  pH          ×0.1
-//   [11-12]Register 4  N           mg/kg
-//   [13-14]Register 5  P           mg/kg
-//   [15-16]Register 6  K           mg/kg
-//   [17-18]CRC-16 (lo, hi)
-//
-// Fix: collect up to 24 raw bytes, then SCAN for the valid frame header
-// (0x01, 0x03, 0x0E) to skip any direction-change glitch bytes.
-// ─────────────────────────────────────────────────────────────────────────
-Soil readSensor() {
-  Soil s = {};
-  const uint8_t FRAME_LEN = 19;   // expected Modbus response size
+// Registers: [0] Moisture  [1] Temperature  [2] EC
+//            [3] pH        [4] N  [5] P  [6] K
 
-  // Build request
-  uint8_t req[8] = { SENSOR_ADDR, 0x03, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00 };
-  uint16_t c = crc16(req, 6);
-  req[6] = c & 0xFF;
-  req[7] = c >> 8;
+bool readSoilSensor(uint16_t *values) {
+
+  uint8_t request[8];
+  request[0] = SENSOR_ID;
+  request[1] = 0x03;
+  request[2] = 0x00;
+  request[3] = 0x00;
+  request[4] = 0x00;
+  request[5] = 0x07;
+
+  uint16_t crc = modbusCRC(request, 6);
+  request[6] = crc & 0xFF;
+  request[7] = (crc >> 8) & 0xFF;
 
   // Flush stale bytes
   while (RS485Serial.available()) RS485Serial.read();
 
-  // ── TX ──
-  txMode();
-  delay(10);
-  Serial.print(F("TX: ")); printHexMsg(req, sizeof(req));
-  RS485Serial.write(req, sizeof(req));
+  rs485Transmit();
+  delayMicroseconds(100);
+  RS485Serial.write(request, 8);
   RS485Serial.flush();
+  delayMicroseconds(100);
+  rs485Receive();
 
-  // Let the 485 bus settle after direction switch (avoids glitch byte)
-  delay(20);
-  rxMode();
+  // Read 19-byte response
+  uint8_t response[19];
+  uint8_t index = 0;
+  unsigned long startTime = millis();
 
-  // ── RX: collect up to 24 bytes within 1000 ms ──
-  const uint8_t BUFLEN = 24;
-  uint8_t buf[BUFLEN];
-  uint8_t total = 0;
-  uint32_t t0 = millis();
-
-  while (total < BUFLEN && millis() - t0 < 1000) {
+  while (millis() - startTime < 1000) {
     if (RS485Serial.available()) {
-      buf[total++] = RS485Serial.read();
+      response[index++] = RS485Serial.read();
+      if (index >= 19) break;
     }
   }
 
-  Serial.print(F("RX raw (")); Serial.print(total); Serial.print(F(" bytes): "));
-  printHexMsg(buf, total);
-  Serial.println(F("--------------------------------"));
-
-  if (total < FRAME_LEN) {
-    Serial.printf("[RS485] Only %d/%d bytes — check wiring/12V supply\n", total, FRAME_LEN);
-    return s;
+  if (index != 19) {
+    Serial.print(F("ERROR: Expected 19 bytes, received "));
+    Serial.println(index);
+    return false;
   }
 
-  // ── Scan for valid frame header: 0x01  0x03  0x0E ──
-  int8_t frameStart = -1;
-  for (uint8_t i = 0; i <= total - FRAME_LEN; i++) {
-    if (buf[i] == 0x01 && buf[i+1] == 0x03 && buf[i+2] == 0x0E) {
-      frameStart = (int8_t)i;
-      break;
-    }
+  // Print raw bytes
+  Serial.print(F("RX: "));
+  for (uint8_t i = 0; i < index; i++) {
+    if (response[i] < 0x10) Serial.print('0');
+    Serial.print(response[i], HEX);
+    Serial.print(' ');
+  }
+  Serial.println();
+
+  if (response[0] != SENSOR_ID) { Serial.println(F("ERROR: Wrong sensor ID"));      return false; }
+  if (response[1] != 0x03)      { Serial.println(F("ERROR: Invalid function code")); return false; }
+  if (response[2] != 14)        { Serial.println(F("ERROR: Invalid byte count"));    return false; }
+
+  uint16_t receivedCRC   = response[17] | ((uint16_t)response[18] << 8);
+  uint16_t calculatedCRC = modbusCRC(response, 17);
+  if (receivedCRC != calculatedCRC) {
+    Serial.println(F("ERROR: CRC mismatch"));
+    return false;
   }
 
-  if (frameStart < 0) {
-    Serial.println(F("[RS485] Valid frame header not found in response"));
-    return s;
+  for (uint8_t i = 0; i < 7; i++) {
+    values[i] = ((uint16_t)response[3 + i*2] << 8) | response[4 + i*2];
   }
-
-  if (frameStart > 0) {
-    Serial.printf("[RS485] Skipped %d glitch byte(s) before frame\n", frameStart);
-  }
-
-  const uint8_t* f = buf + frameStart;
-
-  // Validate CRC
-  uint16_t rxCRC = (uint16_t)f[FRAME_LEN-1] << 8 | f[FRAME_LEN-2];
-  if (rxCRC != crc16(f, FRAME_LEN-2)) {
-    Serial.println(F("[RS485] CRC mismatch"));
-    return s;
-  }
-
-  // Decode registers
-  uint16_t r[7];
-  for (uint8_t i = 0; i < 7; i++)
-    r[i] = (uint16_t)f[3 + i*2] << 8 | f[4 + i*2];
-
-  s.h  = r[0] * 0.1f;
-  s.t  = r[1] * 0.1f;
-  s.ec = (float)r[2];
-  s.ph = r[3] * 0.1f;
-  s.n  = (float)r[4];
-  s.p  = (float)r[5];
-  s.k  = (float)r[6];
-  s.ok = true;
-  return s;
+  return true;
 }
 
-// ── Rainfall via OpenWeatherMap ───────────────────────────────────────────
+
+// ── WiFi connect ──────────────────────────────────────────────────────────
+
+bool wifiConnect() {
+  if (WiFi.status() == WL_CONNECTED) return true;
+  Serial.printf("[WiFi] Connecting to %s", WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  uint32_t t0 = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - t0 < 15000) {
+    delay(500); Serial.print('.');
+  }
+  Serial.println();
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("[WiFi] Connected — IP: %s\n", WiFi.localIP().toString().c_str());
+    return true;
+  }
+  Serial.println(F("[WiFi] Failed — will retry next cycle"));
+  return false;
+}
+
+
+// ── Rainfall from OpenWeatherMap ──────────────────────────────────────────
+
 float fetchRain() {
   char url[224];
   snprintf(url, sizeof(url),
@@ -212,36 +193,25 @@ float fetchRain() {
   return rain;
 }
 
-// ── WiFi connect ──────────────────────────────────────────────────────────
-bool wifiConnect() {
-  if (WiFi.status() == WL_CONNECTED) return true;
-  Serial.printf("[WiFi] Connecting to %s", WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  uint32_t t0 = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - t0 < 15000) {
-    delay(500);
-    Serial.print('.');
-  }
-  Serial.println();
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("[WiFi] Connected — IP: %s\n", WiFi.localIP().toString().c_str());
-    return true;
-  }
-  Serial.println(F("[WiFi] Failed — will retry next cycle"));
-  return false;
-}
 
-// ── POST to Akuafo Ani API ────────────────────────────────────────────────
-void postAPI(const Soil& s, float rain) {
+// ── POST sensor values to Akuafo Ani app ─────────────────────────────────
+
+void postToApp(float moisture, float temperature, float ec,
+               float pH, uint16_t N, uint16_t P, uint16_t K,
+               float rain) {
+
   if (!wifiConnect()) return;
 
+  // Build JSON body
+  // Note: app FIELDS = [N, P, K, temperature, humidity, ph, rainfall]
+  // "humidity" in the model = soil moisture from the sensor
   StaticJsonDocument<192> body;
-  body["N"]           = s.n;
-  body["P"]           = s.p;
-  body["K"]           = s.k;
-  body["temperature"] = s.t;
-  body["humidity"]    = s.h;
-  body["ph"]          = s.ph;
+  body["N"]           = N;
+  body["P"]           = P;
+  body["K"]           = K;
+  body["temperature"] = temperature;
+  body["humidity"]    = moisture;   // sensor moisture → app humidity field
+  body["ph"]          = pH;
   body["rainfall"]    = rain;
 
   char js[192];
@@ -263,95 +233,105 @@ void postAPI(const Soil& s, float rain) {
   deserializeJson(doc, h.getString());
   h.end();
 
+  // ── Print result ─────────────────────────────────────────────────────
   Serial.println(F("\n===== AKUAFO ANI RESULT ====="));
 
   if (doc["no_match"].as<bool>()) {
-    Serial.println(F("STATUS : NO MATCH"));
+    Serial.println(F("STATUS : NO MATCHING CROP"));
     Serial.println(doc["message"] | "");
-    if (doc["advice"] && doc["advice"] != "") {
+    if (doc.containsKey("advice") && doc["advice"] != "")
       Serial.println(doc["advice"].as<const char*>());
-    }
   } else {
     int rank = 1;
     char line[80];
-    for (JsonObject r : doc["recommendations"].as<JsonArray>()) {
-      snprintf(line, sizeof(line), "#%d %-20s %.0f%%",
+    for (JsonObject rec : doc["recommendations"].as<JsonArray>()) {
+      snprintf(line, sizeof(line), "#%d %-22s %.0f%%",
         rank++,
-        r["crop"].as<const char*>(),
-        r["confidence"].as<float>() * 100.0f);
+        rec["crop"].as<const char*>(),
+        rec["confidence"].as<float>() * 100.0f);
       Serial.println(line);
     }
-    Serial.println(F("\n-- Improvement Tips --"));
+    Serial.println(F("-- Improvement Tips --"));
     for (const char* tip : doc["improvement_tips"].as<JsonArray>()) {
-      Serial.print(F("  * "));
-      Serial.println(tip);
+      Serial.print(F("  * ")); Serial.println(tip);
     }
   }
-
-  Serial.printf("\n-- Soil Readings --\n"
-    "N: %.1f mg/kg  P: %.1f mg/kg  K: %.1f mg/kg\n"
-    "pH: %.2f  Temp: %.1f C  Humidity: %.1f%%  EC: %.0f uS/cm  Rain: %.1f mm\n",
-    s.n, s.p, s.k, s.ph, s.t, s.h, s.ec, rain);
   Serial.println(F("=============================\n"));
 }
 
-// ── SETUP ─────────────────────────────────────────────────────────────────
+
+// ── Setup ─────────────────────────────────────────────────────────────────
+
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+
+  pinMode(RS485_RE_PIN, OUTPUT);
+  pinMode(RS485_DE_PIN, OUTPUT);
+  rs485Receive();
+
+  RS485Serial.begin(BAUD_RATE, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
 
   Serial.println();
   Serial.println(F("=============================="));
-  Serial.println(F("  Akuafo Ani — Sensor Node"));
+  Serial.println(F(" SN-3002 7-IN-1 SOIL SENSOR"));
+  Serial.println(F(" Akuafo Ani Node v2.0"));
   Serial.println(F("=============================="));
-  Serial.printf("DI / TX : GPIO %d\n", RS485_TX);
-  Serial.printf("RO / RX : GPIO %d\n", RS485_RX);
-  Serial.printf("DE      : GPIO %d\n", DE);
-  Serial.printf("RE      : GPIO %d\n", RE);
+  Serial.println(F("Baud: 4800  |  Slave ID: 1"));
   Serial.println();
 
-  pinMode(DE, OUTPUT);
-  pinMode(RE, OUTPUT);
-  rxMode();
-
-  RS485Serial.begin(RS485_BAUD, SERIAL_8N1, RS485_RX, RS485_TX);
-  Serial.println(F("[Boot] RS485 ready"));
-
-  // Give sensor time to power up before first read
   Serial.println(F("[Boot] Waiting 5s for sensor warm-up..."));
   delay(5000);
 
   wifiConnect();
   delay(1000);
-  Serial.println(F("[Boot] Starting first reading...\n"));
+  Serial.println(F("[Boot] Ready.\n"));
 }
 
-// ── LOOP ──────────────────────────────────────────────────────────────────
+
+// ── Main loop ─────────────────────────────────────────────────────────────
+
 void loop() {
+  // Run immediately on first boot, then every READ_INTERVAL
   if (lastRead && millis() - lastRead < READ_INTERVAL) return;
   lastRead = millis();
 
   Serial.println(F("\n[Cycle] ---- New Reading ----"));
 
-  // 1. Get rainfall from OWM
+  uint16_t values[7];
+
+  if (!readSoilSensor(values)) {
+    Serial.println(F("[Sensor] Retrying in 5s..."));
+    delay(5000);
+    if (!readSoilSensor(values)) {
+      Serial.println(F("[Sensor] Failed twice. Check RS485 wiring and 12V supply."));
+      return;
+    }
+  }
+
+  // ── Convert raw register values ───────────────────────────────────────
+  float    moisture    = values[0] / 10.0f;
+  float    temperature = (int16_t)values[1] / 10.0f;  // signed for negatives
+  float    ec          = (float)values[2];
+  float    pH          = values[3] / 10.0f;
+  uint16_t nitrogen    = values[4];
+  uint16_t phosphorus  = values[5];
+  uint16_t potassium   = values[6];
+
+  // ── Print to Serial Monitor ───────────────────────────────────────────
+  Serial.println();
+  Serial.println(F("--------------------------------"));
+  Serial.print(F("Soil Moisture : ")); Serial.print(moisture, 1);    Serial.println(F(" %"));
+  Serial.print(F("Temperature   : ")); Serial.print(temperature, 1); Serial.println(F(" degC"));
+  Serial.print(F("EC            : ")); Serial.print(ec, 0);          Serial.println(F(" uS/cm"));
+  Serial.print(F("pH            : ")); Serial.println(pH, 1);
+  Serial.print(F("Nitrogen      : ")); Serial.print(nitrogen);       Serial.println(F(" mg/kg"));
+  Serial.print(F("Phosphorus    : ")); Serial.print(phosphorus);     Serial.println(F(" mg/kg"));
+  Serial.print(F("Potassium     : ")); Serial.print(potassium);      Serial.println(F(" mg/kg"));
+  Serial.println(F("--------------------------------"));
+
+  // ── Get rainfall then send to app ─────────────────────────────────────
   float rain = 0.0f;
   if (wifiConnect()) rain = fetchRain();
 
-  // 2. Read soil sensor
-  Soil s = readSensor();
-  if (!s.ok) {
-    Serial.println(F("[Sensor] Retrying in 5s..."));
-    delay(5000);
-    s = readSensor();
-  }
-  if (!s.ok) {
-    Serial.println(F("[Sensor] Failed twice. Check RS485 wiring and 12V supply."));
-    return;
-  }
-
-  Serial.printf("[Soil] N=%.1f P=%.1f K=%.1f pH=%.2f T=%.1f RH=%.1f EC=%.0f\n",
-    s.n, s.p, s.k, s.ph, s.t, s.h, s.ec);
-
-  // 3. POST to Akuafo Ani
-  postAPI(s, rain);
+  postToApp(moisture, temperature, ec, pH, nitrogen, phosphorus, potassium, rain);
 }
