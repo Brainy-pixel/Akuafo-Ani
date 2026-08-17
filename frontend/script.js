@@ -1143,8 +1143,13 @@ async function loadWeather() {
         const w = await wRes.json();
         if (w.error) return;
 
-        if (w.humidity  != null) owmHumidityPct = w.humidity;
-        if (w.rain_mm_hr != null) owmRainfallMm = w.rain_mm_hr;
+        if (w.humidity   != null) owmHumidityPct = w.humidity;
+        if (w.rain_mm_hr != null) owmRainfallMm  = w.rain_mm_hr;
+
+        // Update location name on the weather card
+        const placeName = w.location || "Your Location";
+        const placeEl = document.getElementById("weather-place");
+        if (placeEl) placeEl.textContent = placeName;
 
         // Reveal GPS button and update tooltip
         const gpsBtn = document.getElementById("gps-fill-rainfall-btn");
@@ -1721,10 +1726,10 @@ async function analyze() {
   // ── Validate pH ──────────────────────────────────────────────────────────
   const phEl = document.getElementById("in-ph");
   const phVal = parseFloat(phEl.value);
-  if (phVal < 4 || phVal > 8) {
+  if (phVal < 3 || phVal > 10) {
     await showInputWarning(
       "Soil pH Out of Range",
-      `The entered pH value (${phVal}) is outside the valid range (4 to 8). ` +
+      `The entered pH value (${phVal}) is outside the valid range (3 to 10). ` +
       "Analysis cannot proceed. Please correct the soil pH before running the analysis."
     );
     phEl.focus();
