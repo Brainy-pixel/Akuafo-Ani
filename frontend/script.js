@@ -1106,27 +1106,27 @@ document.getElementById("tts-picker").addEventListener("click", (e) => {
   if (lines && btn) speakInEnglish(lines, btn, voice);
 });
 
-// ── GPS + Open-Meteo rainfall integration ─────────────────────────────────
-// On login: requests GPS coordinates, calls /api/rainfall (Open-Meteo free
-// historical archive — no API key needed) for the past-12-month total, then
-// reveals a "📍 GPS" button next to the Rainfall input on the Crops tab so
-// the farmer can pre-fill that field with their location's annual average.
-// ──────────────────────────────────────────────────────────────────────────
+// ── GPS + OWM weather integration ────────────────────────────────────────
+// On login: requests GPS coordinates, calls /api/weather (OWM proxy) to get
+// the current humidity and rainfall for the user's location, then reveals a
+// "📍 GPS" button that pre-fills both Humidity and Rainfall on the Crops tab.
+// ─────────────────────────────────────────────────────────────────────────
 
-let annualRainfallMm = null;  // set once GPS + Open-Meteo data arrives
-let owmHumidityPct   = null;  // current relative humidity from OWM
+// GPS location data fetched from OWM via /api/weather
+let owmRainfallMm  = null;   // rain_mm_hr from OWM current weather
+let owmHumidityPct = null;   // humidity % from OWM current weather
 
 function applyLocationData() {
   let filled = false;
-  if (annualRainfallMm !== null) {
-    document.getElementById("in-rainfall").value = annualRainfallMm;
+  if (owmRainfallMm !== null) {
+    document.getElementById("in-rainfall").value = owmRainfallMm;
     filled = true;
   }
   if (owmHumidityPct !== null) {
     document.getElementById("in-humidity").value = owmHumidityPct;
     filled = true;
   }
-  if (filled) showView("crops"); // jump to Crops tab so the user sees the filled fields
+  if (filled) showView("crops");
 }
 
 async function loadWeather() {
@@ -1136,46 +1136,33 @@ async function loadWeather() {
     async (pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
 
-      // 1. Annual rainfall from Open-Meteo historical archive (free, no key)
-      try {
-        const rRes = await fetch(`/api/rainfall?lat=${lat}&lon=${lon}`);
-        if (rRes.ok) {
-          const rData = await rRes.json();
-          if (!rData.error && rData.annual_mm != null) {
-            annualRainfallMm = rData.annual_mm;
-          }
-        }
-      } catch (e) { console.warn("Rainfall fetch failed:", e); }
-
-      // 2. Current humidity from OWM via server-side proxy /api/weather
+      // Fetch humidity + rainfall from OWM via server-side proxy /api/weather
       try {
         const wRes = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
-        if (wRes.ok) {
-          const wData = await wRes.json();
-          if (!wData.error && wData.humidity != null) {
-            owmHumidityPct = wData.humidity;
-          }
-        }
-      } catch (e) { console.warn("Weather/humidity fetch failed:", e); }
+        if (!wRes.ok) return;
+        const w = await wRes.json();
+        if (w.error) return;
 
-      // Show GPS button once either value is ready
-      if (annualRainfallMm !== null || owmHumidityPct !== null) {
+        if (w.humidity  != null) owmHumidityPct = w.humidity;
+        if (w.rain_mm_hr != null) owmRainfallMm = w.rain_mm_hr;
+
+        // Reveal GPS button and update tooltip
         const gpsBtn = document.getElementById("gps-fill-rainfall-btn");
-        if (gpsBtn) {
+        if (gpsBtn && (owmHumidityPct !== null || owmRainfallMm !== null)) {
           gpsBtn.style.display = "inline-flex";
           const parts = [];
-          if (annualRainfallMm !== null) parts.push(`Rainfall: ${annualRainfallMm} mm`);
-          if (owmHumidityPct   !== null) parts.push(`Humidity: ${owmHumidityPct}%`);
-          gpsBtn.title = `From your location — ${parts.join(", ")}. Tap to pre-fill.`;
+          if (owmHumidityPct !== null) parts.push(`Humidity: ${owmHumidityPct}%`);
+          if (owmRainfallMm  !== null) parts.push(`Rainfall: ${owmRainfallMm} mm`);
+          gpsBtn.title = `From your location (OWM) — ${parts.join(", ")}. Tap to pre-fill.`;
         }
-      }
+      } catch (e) { console.warn("Weather fetch failed:", e); }
     },
     (err) => { console.warn("Geolocation not available:", err.message); },
     { timeout: 10000, maximumAge: 300000 }
   );
 }
 
-// "📍 GPS" button next to the Rainfall input — now fills both rainfall AND humidity
+// "📍 GPS" button — fills both Humidity and Rainfall from OWM
 document.getElementById("gps-fill-rainfall-btn").addEventListener("click", applyLocationData);
 
 function collectInputs() {
