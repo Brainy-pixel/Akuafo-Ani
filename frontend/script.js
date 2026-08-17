@@ -1173,6 +1173,9 @@ function clearAllInputs() {
   for (const f of FIELDS) {
     document.getElementById("in-" + f).value = "";
   }
+  // Clear moisture separately — it's display-only, not in FIELDS
+  const mEl = document.getElementById("in-moisture");
+  if (mEl) mEl.value = "";
 }
 
 document.getElementById("clear-all-btn").addEventListener("click", () => {
@@ -1249,6 +1252,9 @@ document.getElementById("live-feed-btn").addEventListener("click", async () => {
     const el = document.getElementById("in-" + fieldId);
     if (el && data[key] !== undefined) el.value = Number(data[key]).toFixed(1);
   }
+  // Populate moisture display field (not sent to model)
+  const mEl = document.getElementById("in-moisture");
+  if (mEl && data.humidity !== undefined) mEl.value = Number(data.humidity).toFixed(1);
 
   liveStatus.textContent = "Fields filled — running analysis…";
 
