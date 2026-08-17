@@ -1113,12 +1113,20 @@ document.getElementById("tts-picker").addEventListener("click", (e) => {
 // the farmer can pre-fill that field with their location's annual average.
 // ──────────────────────────────────────────────────────────────────────────
 
-let annualRainfallMm = null; // set once GPS + Open-Meteo data arrives
+let annualRainfallMm = null;  // set once GPS + Open-Meteo data arrives
+let owmHumidityPct   = null;  // current relative humidity from OWM
 
-function applyAnnualRainfall() {
-  if (annualRainfallMm === null) return;
-  document.getElementById("in-rainfall").value = annualRainfallMm;
-  showView("crops"); // jump to Crops tab so the user sees the filled field
+function applyLocationData() {
+  let filled = false;
+  if (annualRainfallMm !== null) {
+    document.getElementById("in-rainfall").value = annualRainfallMm;
+    filled = true;
+  }
+  if (owmHumidityPct !== null) {
+    document.getElementById("in-humidity").value = owmHumidityPct;
+    filled = true;
+  }
+  if (filled) showView("crops"); // jump to Crops tab so the user sees the filled fields
 }
 
 async function loadWeather() {
@@ -1128,29 +1136,47 @@ async function loadWeather() {
     async (pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
 
-      // Annual rainfall from Open-Meteo historical archive (free, no key)
+      // 1. Annual rainfall from Open-Meteo historical archive (free, no key)
       try {
         const rRes = await fetch(`/api/rainfall?lat=${lat}&lon=${lon}`);
         if (rRes.ok) {
           const rData = await rRes.json();
           if (!rData.error && rData.annual_mm != null) {
             annualRainfallMm = rData.annual_mm;
-            const gpsBtn = document.getElementById("gps-fill-rainfall-btn");
-            if (gpsBtn) {
-              gpsBtn.style.display = "inline-flex";
-              gpsBtn.title = `Your location's annual rainfall: ${annualRainfallMm} mm. Tap to pre-fill.`;
-            }
           }
         }
       } catch (e) { console.warn("Rainfall fetch failed:", e); }
+
+      // 2. Current humidity from OWM via server-side proxy /api/weather
+      try {
+        const wRes = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+        if (wRes.ok) {
+          const wData = await wRes.json();
+          if (!wData.error && wData.humidity != null) {
+            owmHumidityPct = wData.humidity;
+          }
+        }
+      } catch (e) { console.warn("Weather/humidity fetch failed:", e); }
+
+      // Show GPS button once either value is ready
+      if (annualRainfallMm !== null || owmHumidityPct !== null) {
+        const gpsBtn = document.getElementById("gps-fill-rainfall-btn");
+        if (gpsBtn) {
+          gpsBtn.style.display = "inline-flex";
+          const parts = [];
+          if (annualRainfallMm !== null) parts.push(`Rainfall: ${annualRainfallMm} mm`);
+          if (owmHumidityPct   !== null) parts.push(`Humidity: ${owmHumidityPct}%`);
+          gpsBtn.title = `From your location — ${parts.join(", ")}. Tap to pre-fill.`;
+        }
+      }
     },
     (err) => { console.warn("Geolocation not available:", err.message); },
     { timeout: 10000, maximumAge: 300000 }
   );
 }
 
-// "📍 GPS" button next to the Rainfall input (crops tab)
-document.getElementById("gps-fill-rainfall-btn").addEventListener("click", applyAnnualRainfall);
+// "📍 GPS" button next to the Rainfall input — now fills both rainfall AND humidity
+document.getElementById("gps-fill-rainfall-btn").addEventListener("click", applyLocationData);
 
 function collectInputs() {
   const values = {};
