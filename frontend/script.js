@@ -1122,32 +1122,43 @@ document.getElementById("reset-btn").addEventListener("click", () => {
 });
 
 // ── Live Sensor Feed ──────────────────────────────────────────────────────
-// Polls /api/latest every 30 s and lights up the indicator dot when a
-// reading is available. Clicking "Live Sensor" fills all form fields with
-// the ESP32's latest values and auto-runs analysis.
+// Polls /api/latest every 15 s. Three states from the server:
+//   204              → ESP32 offline  → dot grey
+//   200 {online}     → ESP32 on, no soil reading yet → dot amber
+//   200 {online,N,…} → ESP32 on with full data → dot green
 
 const liveDot    = document.getElementById("live-dot");
 const liveStatus = document.getElementById("live-feed-status");
 let   livePollTimer = null;
 
 function setLiveDot(state) {
-  // state: "idle" | "live" | "loading" | "none"
+  // state: "idle" | "connecting" | "live" | "loading"
   liveDot.className = "live-dot live-dot--" + state;
 }
 
 async function checkLiveFeed() {
   try {
     const res = await fetch("/api/latest");
+
+    // 204 — ESP32 offline
     if (res.status === 204) {
-      // No reading yet from sensor
       setLiveDot("idle");
-      liveStatus.textContent = "No sensor reading yet. Waiting for ESP32.";
+      liveStatus.textContent = "ESP32 is off. No sensor connected.";
       return null;
     }
+
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
-    setLiveDot("live");
 
+    // Online but no soil reading yet
+    if (data.N == null) {
+      setLiveDot("connecting");
+      liveStatus.textContent = "ESP32 connected. Waiting for first soil reading...";
+      return null;
+    }
+
+    // Full soil data available
+    setLiveDot("live");
     const age = data.received_at
       ? Math.round((Date.now() - new Date(data.received_at).getTime()) / 1000)
       : null;
@@ -1155,6 +1166,7 @@ async function checkLiveFeed() {
       ? `Last reading: ${age < 60 ? age + "s ago" : Math.round(age / 60) + " min ago"}`
       : "Sensor reading available.";
     return data;
+
   } catch (e) {
     setLiveDot("idle");
     liveStatus.textContent = "Could not reach server.";
@@ -1164,12 +1176,12 @@ async function checkLiveFeed() {
 
 function startLivePoll() {
   checkLiveFeed();
-  livePollTimer = setInterval(checkLiveFeed, 30000);
+  livePollTimer = setInterval(checkLiveFeed, 15000);  // poll every 15 s
 }
 
 document.getElementById("live-feed-btn").addEventListener("click", async () => {
   setLiveDot("loading");
-  liveStatus.textContent = "Fetching latest sensor reading…";
+  liveStatus.textContent = "Fetching latest sensor reading...";
 
   const data = await checkLiveFeed();
   if (!data) return;

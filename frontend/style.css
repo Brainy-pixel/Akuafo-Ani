@@ -473,9 +473,10 @@ h1, h2, h3, h4,
   background: var(--muted);
   transition: background 0.3s;
 }
-.live-dot--live    { background: #2ecc71; animation: livePulse 1.6s ease-in-out infinite; }
-.live-dot--loading { background: #f39c12; animation: livePulse 0.7s ease-in-out infinite; }
-.live-dot--idle    { background: var(--muted); animation: none; }
+.live-dot--live       { background: #2ecc71; animation: livePulse 1.6s ease-in-out infinite; }
+.live-dot--connecting { background: #f39c12; animation: livePulse 1.2s ease-in-out infinite; }
+.live-dot--loading    { background: #f39c12; animation: livePulse 0.7s ease-in-out infinite; }
+.live-dot--idle       { background: var(--muted); animation: none; }
 @keyframes livePulse {
   0%,100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.4; transform: scale(1.3); }

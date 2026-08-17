@@ -52,7 +52,7 @@ OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
 # Resets on server restart; no persistence needed for live display.
 _latest_sensor: dict = {}
 _last_heartbeat: float = 0.0   # Unix timestamp of last ESP32 contact (heartbeat or reading)
-_HEARTBEAT_STALE = 45          # seconds — 2.25× the 20s heartbeat interval
+_HEARTBEAT_STALE = 90          # seconds — 4.5× the 20s heartbeat interval; tolerates WiFi hiccups
 
 
 def _load_or_create_secret_key():
@@ -622,14 +622,17 @@ def heartbeat():
 @app.route("/api/latest", methods=["GET"])
 def latest_sensor():
     """Returns the most recent reading posted by the ESP32 sensor node.
-    Returns 204 No Content if:
-      - no reading has arrived yet this session, OR
-      - no heartbeat has been received in the last 45 seconds
-        (ESP32 is considered powered off)."""
+    Three possible responses:
+      204  — ESP32 offline (no heartbeat in last 90 s)
+      200  {"online": true}  — ESP32 online but no soil reading yet this session
+      200  {full sensor data + "online": true}  — ESP32 online with data"""
     import time
-    if not _latest_sensor or (time.time() - _last_heartbeat) > _HEARTBEAT_STALE:
+    online = (time.time() - _last_heartbeat) <= _HEARTBEAT_STALE and _last_heartbeat > 0
+    if not online:
         return "", 204
-    return jsonify(_latest_sensor)
+    if not _latest_sensor:
+        return jsonify({"online": True})
+    return jsonify({**_latest_sensor, "online": True})
 
 
 @app.route("/api/predict", methods=["POST"])
