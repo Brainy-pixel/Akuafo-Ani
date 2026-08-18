@@ -43,6 +43,18 @@ FEATURE_META = {
     "rainfall": {"label": "Rainfall", "unit": "mm"},
 }
 
+# Zero-guard: minimum value below which a field is treated as "missing" and
+# replaced by nearest-neighbour imputation from the training dataset.
+# Rainfall is excluded — 0 mm/hr is a valid real-world value (dry spell).
+_ZERO_GUARD = {
+    "N":           1.0,   # < 1 mg/kg nitrogen   → sensor error or unread
+    "P":           1.0,   # < 1 mg/kg phosphorus → sensor error or unread
+    "K":           1.0,   # < 1 mg/kg potassium  → sensor error or unread
+    "temperature": 1.0,   # < 1 °C in tropical Ghana → implausible
+    "humidity":    1.0,   # < 1 % soil moisture  → bone-dry / unread
+    "ph":          2.0,   # pH < 2 is not a real agricultural soil value
+}
+
 app = Flask(__name__, static_folder="frontend", static_url_path="")
 
 # OpenWeatherMap API key — set OPENWEATHER_API_KEY in your environment / Render settings.
@@ -656,6 +668,14 @@ def predict():
     for f in FEATURES:
         v = body.get(f, None)
         values[f] = None if v in (None, "") else float(v)
+
+    # Zero-guard: replace any field that is zero (or below its physical floor)
+    # with None so the nearest-neighbour imputation fills it with a realistic
+    # value from the training dataset instead of passing 0 into the model.
+    # Rainfall is not guarded — 0 mm/hr is a genuine dry-spell reading.
+    for _f, _floor in _ZERO_GUARD.items():
+        if values.get(_f) is not None and values[_f] < _floor:
+            values[_f] = None
 
     top3, used_fuzzy, no_match = predict_crop_fuzzy(values)
 
