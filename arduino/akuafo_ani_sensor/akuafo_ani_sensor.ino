@@ -32,7 +32,7 @@
 #define LOCATION_LAT     5.6037
 #define LOCATION_LNG    -0.1870
 
-#define READ_INTERVAL    300000UL   // 5 minutes between full soil readings
+#define READ_INTERVAL    60000UL    // 60 seconds between full soil readings
 #define HEARTBEAT_INTERVAL 20000UL  // 20 seconds between keep-alive pings
 
 // ── RS485 / sensor config ─────────────────────────────────────────────────
@@ -98,18 +98,19 @@ bool readSoilSensor(uint16_t *values) {
   while (RS485Serial.available()) RS485Serial.read();
 
   rs485Transmit();
-  delayMicroseconds(100);
+  delay(10);                           // let DE/RE settle (RS485 direction switch)
   RS485Serial.write(request, 8);
   RS485Serial.flush();
-  delayMicroseconds(100);
+  delay(10);                           // wait for last byte to leave the UART
   rs485Receive();
+  delay(100);                          // sensor wake-up: SN-3002 needs ~80–100 ms to prepare response
 
   // Read 19-byte response
   uint8_t response[19];
   uint8_t index = 0;
   unsigned long startTime = millis();
 
-  while (millis() - startTime < 1000) {
+  while (millis() - startTime < 3000) {  // 3 s timeout — was 1 s, too tight at 4800 baud
     if (RS485Serial.available()) {
       response[index++] = RS485Serial.read();
       if (index >= 19) break;
